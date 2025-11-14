@@ -1,0 +1,13 @@
+{
+  "name": "multilingual-messaging-app",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @app/infra && npm run build -w @app/lambdas",
+    "test": "echo \"No tests yet\" && exit 1"
+  }
+}

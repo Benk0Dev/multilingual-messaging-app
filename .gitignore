@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# CDK (cdk has its own .gitignore, but just in case)
+cdk.out/
+.cdk.staging/
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Mac
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
