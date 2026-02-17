@@ -1,16 +1,21 @@
-import * as cdk from 'aws-cdk-lib/core';
-import { Construct } from 'constructs';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as cdk from "aws-cdk-lib"
+import { Construct } from "constructs"
+import * as ec2 from "aws-cdk-lib/aws-ec2";
+import { DatabaseStack } from "./stacks/database-stack"
 
 export class InfraStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
+    constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+        super(scope, id, props);
 
-    // The code that defines your stack goes here
+        const vpc = new ec2.Vpc(this, "AppVpc", {
+            maxAzs: 2,
+            natGateways: 0, // keep cost low (NAT gateways cost money)
+            subnetConfiguration: [
+                { name: "public", subnetType: ec2.SubnetType.PUBLIC },
+                { name: "isolated", subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+            ],
+        });
 
-    // example resource
-    // const queue = new sqs.Queue(this, 'InfraQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
-  }
+        const db = new DatabaseStack(this, "Database", { vpc });
+    }
 }
