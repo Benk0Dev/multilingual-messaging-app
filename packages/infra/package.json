@@ -26,7 +26,7 @@
     "typescript": "~5.6.3"
   },
   "dependencies": {
-    "@app/shared-types": "workspace:*",
+    "@app/shared-types": "*",
     "aws-cdk-lib": "2.224.0",
     "constructs": "^10.0.0"
   }
