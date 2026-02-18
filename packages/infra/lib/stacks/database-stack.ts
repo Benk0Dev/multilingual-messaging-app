@@ -18,9 +18,16 @@ export class DatabaseStack extends cdk.NestedStack {
             allowAllOutbound: true,
         });
 
+        // Temporary solution for allowing access to the database from local machine during development.
+        dbSecurityGroup.addIngressRule(
+            ec2.Peer.ipv4(`${process.env.MY_IP}/32`),
+            ec2.Port.tcp(5432)
+        );
+
         const db = new rds.DatabaseInstance(this, "PostgresDb", {
             vpc: props.vpc,
-            vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+            // vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+            vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
             securityGroups: [dbSecurityGroup],
             engine: rds.DatabaseInstanceEngine.postgres({
                 version: rds.PostgresEngineVersion.VER_17_6,
@@ -38,7 +45,8 @@ export class DatabaseStack extends cdk.NestedStack {
             deletionProtection: false,
             removalPolicy: RemovalPolicy.DESTROY,
             deleteAutomatedBackups: true,
-            publiclyAccessible: false,
+            // publiclyAccessible: false,
+            publiclyAccessible: true, // for testing purposes only (make sure to remove this in production)
         });
     }
 }

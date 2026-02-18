@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                String       @id @default(uuid()) @map("id") @db.Uuid
+  displayName       String       @map("display_name")
+  preferredLanguage String       @map("preferred_language")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  chatMemberships   ChatMember[]
+  sentMessages      Message[]
+
+  @@map("users")
+}
+
+model Chat {
+  id        String       @id @default(uuid()) @map("id") @db.Uuid
+  createdAt DateTime     @default(now()) @map("created_at")
+  members   ChatMember[]
+  messages  Message[]
+
+  @@map("chats")
+}
+
+model ChatMember {
+  chatId    String   @map("chat_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@id([chatId, userId])
+  @@map("chat_members")
+}
+
+model Message {
+  id        String         @id @default(uuid()) @map("id") @db.Uuid
+  chatId    String         @map("chat_id") @db.Uuid
+  senderId  String         @map("sender_id") @db.Uuid
+  contentId String         @unique @map("content_id") @db.Uuid
+  isDeleted Boolean        @default(false) @map("is_deleted")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  chat      Chat           @relation(fields: [chatId], references: [id])
+  content   MessageContent @relation(fields: [contentId], references: [id])
+  sender    User           @relation(fields: [senderId], references: [id])
+
+  @@index([chatId, createdAt(sort: Desc)])
+  @@map("messages")
+}
+
+model MessageContent {
+  id               String               @id @default(uuid()) @map("id") @db.Uuid
+  originalLanguage String               @map("original_language")
+  textBody         String               @map("text_body")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  translations     MessageTranslation[]
+  messages         Message?
+
+  @@map("message_contents")
+}
+
+model MessageTranslation {
+  contentId          String         @map("content_id") @db.Uuid
+  targetLanguage     String         @map("target_language")
+  translatedTextBody String         @map("translated_text_body")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+  content            MessageContent @relation(fields: [contentId], references: [id])
+
+  @@id([contentId, targetLanguage])
+  @@index([contentId])
+  @@map("message_translations")
+}
