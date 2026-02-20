@@ -55,6 +55,7 @@ export async function createChat(input: { userIds: string[] }) {
 }
 
 export async function getChatsByUser(userId: string) {
+    // TODO: order by last message
     return await prisma.chat.findMany({
         where: {
             members: {

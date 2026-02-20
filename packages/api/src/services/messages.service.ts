@@ -57,7 +57,12 @@ export async function getMessagesForChat(chatId: string) {
     return prisma.message.findMany({
         where: { chatId },
         orderBy: { createdAt: "asc" },
-        include: {
+        select: {
+            id: true,
+            senderId: true,
+            isDeleted: true,
+            createdAt: true,
+            updatedAt: true,
             sender: {
                 select: {
                     id: true,
