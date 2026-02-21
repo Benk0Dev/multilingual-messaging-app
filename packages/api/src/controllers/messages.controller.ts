@@ -4,7 +4,7 @@ import * as messagesService from "../services/messages.service";
 type CreateMessageBody = {
     senderId: string;
     content: {
-        textBody: string;
+        text: string;
     };
 };
 

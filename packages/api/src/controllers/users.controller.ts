@@ -3,8 +3,9 @@ import * as usersService from "../services/users.service";
 
 type CreateUserBody = {
     // email: string;
+    username: string;
     displayName: string;
-    preferredLanguage: string;
+    preferredLang: string;
 };
 
 export async function createUser(req: Request, res: Response) {
@@ -12,9 +13,10 @@ export async function createUser(req: Request, res: Response) {
         const body = req.body as CreateUserBody;
 
         // TODO: add proper validation (e.g. using zod or similar)
+        const username = body.username.trim();
         const displayName = body.displayName.trim();
 
-        const user = await usersService.createUser({ displayName, preferredLanguage: body.preferredLanguage });
+        const user = await usersService.createUser({ username, displayName, preferredLang: body.preferredLang });
 
         return res.status(201).json({
             user,

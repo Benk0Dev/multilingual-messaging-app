@@ -1,3 +1,4 @@
+import { Chat } from "@app/shared-types/models";
 import { useEffect, useState } from "react";
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
@@ -7,7 +8,7 @@ import { getDevUserId, setDevUserId, clearDevUserId } from "../../../src/devUser
 export default function ChatsScreen() {
   const [devUserId, setDevUserIdState] = useState<string | null>(null);
   const [input, setInput] = useState("");
-  const [chats, setChats] = useState<any[]>([]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

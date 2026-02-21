@@ -1,4 +1,5 @@
 import { prisma } from "@app/db";
+import { Chat } from "@app/shared-types/models";
 
 export async function createChat(input: { userIds: string[] }) {
     const validUserIds = await prisma.user.findMany({
@@ -9,6 +10,8 @@ export async function createChat(input: { userIds: string[] }) {
         },
         select: {
             id: true,
+            username: true,
+            displayName: true,
         },
     });
 
@@ -32,8 +35,8 @@ export async function createChat(input: { userIds: string[] }) {
         throw new Error("already_exists");
     }
 
-    const chat = await prisma.$transaction(async (tx) => {
-        const newChat = await tx.chat.create({
+    return await prisma.$transaction(async (tx) => {
+        const chat = await tx.chat.create({
             data: {},
             select: {
                 id: true,
@@ -43,20 +46,27 @@ export async function createChat(input: { userIds: string[] }) {
 
         await tx.chatMember.createMany({
             data: validUserIds.map((user) => ({
-                chatId: newChat.id,
+                chatId: chat.id,
                 userId: user.id,
             })),
         });
 
-        return newChat;
+        return {
+            ...chat,
+            id: chat.id.toString(),
+            createdAt: chat.createdAt.toISOString(),
+            members: validUserIds.map((user) => ({
+                id: user.id.toString(),
+                username: user.username,
+                displayName: user.displayName,
+            })),
+        } satisfies Chat;
     });
-
-    return chat;
 }
 
 export async function getChatsByUser(userId: string) {
     // TODO: order by last message
-    return await prisma.chat.findMany({
+    const chats = await prisma.chat.findMany({
         where: {
             members: {
                 some: {
@@ -67,6 +77,27 @@ export async function getChatsByUser(userId: string) {
         select: {
             id: true,
             createdAt: true,
+            members: {
+                select: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            displayName: true,
+                        },
+                    },
+                },
+            },
         },
     });
+
+    return chats.map((chat) => ({
+        ...chat,
+        id: chat.id.toString(),
+        createdAt: chat.createdAt.toISOString(),
+        members: chat.members.map((member) => ({
+            ...member.user,
+            id: member.user.id.toString(),
+        })),
+    })) satisfies Chat[];
 }

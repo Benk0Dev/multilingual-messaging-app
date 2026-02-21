@@ -1,6 +1,7 @@
 import { prisma } from "@app/db";
+import { Message } from "@app/shared-types/models";
 
-export async function createMessageForChat(chatId: string, senderId: string, content: { textBody: string }) {
+export async function createMessageForChat(chatId: string, senderId: string, content: { text: string }) {
     const validIds = Promise.all([
         prisma.chat.findUnique({ where: { id: chatId }, select: { id: true } }),
         prisma.user.findUnique({ where: { id: senderId }, select: { id: true } }),
@@ -16,16 +17,16 @@ export async function createMessageForChat(chatId: string, senderId: string, con
         throw new Error("sender_not_found");
     }
 
-    const message = prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx) => {
         const messageContent = await tx.messageContent.create({
             data: {
-                textBody: content.textBody,
-                originalLanguage: "en", // temporary hardcoding
+                text: content.text,
+                originalLang: "en", // temporary hardcoding
             },
             select: {
                 id: true,
-                textBody: true,
-                originalLanguage: true,
+                text: true,
+                originalLang: true,
             },
         });
 
@@ -37,45 +38,100 @@ export async function createMessageForChat(chatId: string, senderId: string, con
             },
             select: {
                 id: true,
-                chatId: true,
-                senderId: true,
+                chat: {
+                    select: {
+                        id: true,
+                    },
+                },
+                sender: {
+                    select: {
+                        id: true,
+                        username: true,
+                        displayName: true,
+                    },
+                },
+                content: {
+                    select: {
+                        id: true,
+                        text: true,
+                        originalLang: true,
+                    },
+                },
+                isDeleted: true,
                 createdAt: true,
+                updatedAt: true,
             },
         });
 
         return {
             ...message,
-            content: messageContent,
-        };
+            id: message.id.toString(),
+            chat: {
+                id: message.chat.id.toString(),
+            },
+            sender: {
+                ...message.sender,
+                id: message.sender.id.toString(),
+            },
+            content: {
+                ...message.content,
+                id: message.content.id.toString(),
+            },
+            createdAt: message.createdAt.toISOString(),
+            updatedAt: message.updatedAt.toISOString(),
+        } satisfies Message;
 
     });
-
-    return message;
 }
 
 export async function getMessagesForChat(chatId: string) {
-    return prisma.message.findMany({
+    const messages = await prisma.message.findMany({
         where: { chatId },
         orderBy: { createdAt: "asc" },
         select: {
             id: true,
-            senderId: true,
-            isDeleted: true,
-            createdAt: true,
-            updatedAt: true,
+            chat: {
+                select: {
+                    id: true,
+                },
+            },
             sender: {
                 select: {
                     id: true,
+                    username: true,
                     displayName: true,
                 },
             },
             content: {
                 select: {
                     id: true,
-                    textBody: true,
-                    originalLanguage: true,
+                    text: true,
+                    originalLang: true,
                 },
             },
+            isDeleted: true,
+            createdAt: true,
+            updatedAt: true,
         },
     });
+
+    return {
+        messages: messages.map((message) => ({
+            ...message,
+            id: message.id.toString(),
+            chat: {
+                id: message.chat.id.toString(),
+            },
+            sender: {
+                ...message.sender,
+                id: message.sender.id.toString(),
+            },
+            content: {
+                ...message.content,
+                id: message.content.id.toString(),
+            },
+            createdAt: message.createdAt.toISOString(),
+            updatedAt: message.updatedAt.toISOString(),
+        })) satisfies Message[],
+    }
 }

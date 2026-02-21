@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@app/db": "^1.0.0",
+    "@app/shared-types": "^0.1.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1"
   }

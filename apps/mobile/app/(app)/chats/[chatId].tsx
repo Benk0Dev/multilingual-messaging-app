@@ -1,3 +1,4 @@
+import { Message } from "@app/shared-types/models";
 import { useEffect, useRef, useState } from "react";
 import {
     FlatList,
@@ -26,7 +27,7 @@ export default function ChatScreen() {
 
     console.log("chatId:", chatId);
 
-    const [messages, setMessages] = useState<any[]>([]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [text, setText] = useState("");
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -79,7 +80,7 @@ export default function ChatScreen() {
                     <View style={{ padding: 8, alignItems: mine ? "flex-end" : "flex-start" }}>
                         <View style={{ maxWidth: "80%", padding: 10, borderWidth: 1, borderRadius: 12 }}>
                             <Text style={{ fontSize: 12, opacity: 0.7 }}>{item.sender.displayName}</Text>
-                            <Text style={{ fontSize: 16 }}>{item.content.textBody}</Text>
+                            <Text style={{ fontSize: 16 }}>{item.content.text}</Text>
                         </View>
                     </View>
                 );

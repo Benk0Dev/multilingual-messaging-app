@@ -8,14 +8,16 @@ datasource db {
 }
 
 model User {
-  id                String       @id @default(uuid()) @map("id") @db.Uuid
-  displayName       String       @map("display_name")
-  preferredLanguage String       @map("preferred_language")
-  createdAt         DateTime     @default(now()) @map("created_at")
-  updatedAt         DateTime     @updatedAt @map("updated_at")
-  chatMemberships   ChatMember[]
-  sentMessages      Message[]
+  id              String       @id @default(uuid()) @map("id") @db.Uuid
+  username        String       @unique @map("username")
+  displayName     String       @map("display_name")
+  preferredLang   String       @map("preferred_lang")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  chatMemberships ChatMember[]
+  sentMessages    Message[]
 
+  @@index([username])
   @@map("users")
 }
 
@@ -56,26 +58,26 @@ model Message {
 }
 
 model MessageContent {
-  id               String               @id @default(uuid()) @map("id") @db.Uuid
-  originalLanguage String               @map("original_language")
-  textBody         String               @map("text_body")
-  createdAt        DateTime             @default(now()) @map("created_at")
-  updatedAt        DateTime             @updatedAt @map("updated_at")
-  translations     MessageTranslation[]
-  messages         Message?
+  id           String               @id @default(uuid()) @map("id") @db.Uuid
+  originalLang String               @map("original_lang")
+  text         String               @map("text")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+  translations MessageTranslation[]
+  messages     Message?
 
   @@map("message_contents")
 }
 
 model MessageTranslation {
-  contentId          String         @map("content_id") @db.Uuid
-  targetLanguage     String         @map("target_language")
-  translatedTextBody String         @map("translated_text_body")
-  createdAt          DateTime       @default(now()) @map("created_at")
-  updatedAt          DateTime       @updatedAt @map("updated_at")
-  content            MessageContent @relation(fields: [contentId], references: [id])
+  contentId      String         @map("content_id") @db.Uuid
+  targetLang     String         @map("target_lang")
+  translatedText String         @map("translated_text")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  content        MessageContent @relation(fields: [contentId], references: [id])
 
-  @@id([contentId, targetLanguage])
+  @@id([contentId, targetLang])
   @@index([contentId])
   @@map("message_translations")
 }
