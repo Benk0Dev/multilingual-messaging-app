@@ -9,6 +9,14 @@
     "./models": {
       "types": "./dist/models/index.d.ts",
       "default": "./dist/models/index.js"
+    },
+    "./enums": {
+      "types": "./dist/enums/index.d.ts",
+      "default": "./dist/enums/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "default": "./dist/schemas/index.js"
     }
   },
   "scripts": {

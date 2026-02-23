@@ -26,7 +26,6 @@ export default function ChatsScreen() {
 
     try {
       const items = await getChatsForUser(userId);
-      console.log("Loaded chats:", items);
       setChats(items);
     } catch (e: any) {
       setError(e?.message ?? "Failed to load chats");

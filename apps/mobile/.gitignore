@@ -42,5 +42,5 @@ app-example
 /ios
 /android
 
-# local config
+# temporary
 /src/config.ts

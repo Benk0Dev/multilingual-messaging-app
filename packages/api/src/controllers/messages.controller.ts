@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
+import { getUser } from "../services/users.service";
 import * as messagesService from "../services/messages.service";
 
 type CreateMessageBody = {
-    senderId: string;
     content: {
         text: string;
+        originalLang: string | "en"; // temporary hardcoding
     };
 };
 
@@ -17,7 +18,14 @@ export async function createMessageForChat(req: Request, res: Response) {
         }
 
         const body = req.body as CreateMessageBody;
-        const message = await messagesService.createMessageForChat(chatId, body.senderId, body.content);
+
+        const me = await getUser({ id: req.auth!.sub });
+
+        const message = await messagesService.createMessageForChat({
+            chatId,
+            senderId: me.id,
+            content: body.content,
+        });
 
         return res.status(201).json({
             message,
@@ -25,12 +33,8 @@ export async function createMessageForChat(req: Request, res: Response) {
     } catch (err: any) {
         console.error(err);
 
-        if (err.message === "chat_not_found") {
-            return res.status(400).json({ error: "Chat ID not found" });
-        }
-
-        if (err.message === "sender_not_found") {
-            return res.status(400).json({ error: "Sender ID not found" });
+        if (err.message === "membership_not_found") {
+            return res.status(400).json({ error: "User is not a member of this chat" });
         }
 
         return res.status(500).json({ error: "Internal server error" });
@@ -45,7 +49,7 @@ export async function getMessagesForChat(req: Request, res: Response) {
             return res.status(400).json({ error: "chatId required" });
         }
 
-        const messages = await messagesService.getMessagesForChat(chatId);
+        const messages = await messagesService.getMessagesForChat({ chatId });
 
         return res.json(messages);
     } catch (err) {

@@ -1,27 +1,32 @@
 import { prisma } from "@app/db";
 import { Message } from "@app/shared-types/models";
 
-export async function createMessageForChat(chatId: string, senderId: string, content: { text: string }) {
-    const validIds = Promise.all([
-        prisma.chat.findUnique({ where: { id: chatId }, select: { id: true } }),
-        prisma.user.findUnique({ where: { id: senderId }, select: { id: true } }),
-    ]);
+export async function createMessageForChat(input: {
+    chatId: string,
+    senderId: string,
+    content: { 
+        text: string;
+        originalLang: string;
+    };
+}) {
+    const memberships = await prisma.chatMember.findUnique({
+        where: {
+            chatId_userId: {
+                chatId: input.chatId,
+                userId: input.senderId,
+            },
+        },
+    });
 
-    const [chat, sender] = await validIds;
-
-    if (!chat) {
-        throw new Error("chat_not_found");
-    }
-
-    if (!sender) {
-        throw new Error("sender_not_found");
+    if (!memberships) {
+        throw new Error("membership_not_found");
     }
 
     return prisma.$transaction(async (tx) => {
         const messageContent = await tx.messageContent.create({
             data: {
-                text: content.text,
-                originalLang: "en", // temporary hardcoding
+                text: input.content.text,
+                originalLang: input.content.originalLang,
             },
             select: {
                 id: true,
@@ -32,8 +37,8 @@ export async function createMessageForChat(chatId: string, senderId: string, con
 
         const message = await tx.message.create({
             data: {
-                chatId,
-                senderId,
+                chatId: input.chatId,
+                senderId: input.senderId,
                 contentId: messageContent.id,
             },
             select: {
@@ -84,9 +89,9 @@ export async function createMessageForChat(chatId: string, senderId: string, con
     });
 }
 
-export async function getMessagesForChat(chatId: string) {
+export async function getMessagesForChat(input: { chatId: string }) {
     const messages = await prisma.message.findMany({
-        where: { chatId },
+        where: { chatId: input.chatId },
         orderBy: { createdAt: "asc" },
         select: {
             id: true,

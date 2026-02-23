@@ -7,9 +7,9 @@ export async function getMessagesForChat(chatId: string): Promise<Message[]> {
 }
 
 // text for now, but will be content with additional attributes
-export async function sendMessage(chatId: string, senderId: string, text: string) {
+export async function sendMessage(chatId: string, text: string) {
     return api<Message>(`/api/chats/${chatId}/messages`, {
         method: "POST",
-        body: JSON.stringify({ senderId, content: { text: text } }),
+        body: JSON.stringify({ content: { text: text } }),
     });
 }

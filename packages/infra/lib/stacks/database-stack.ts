@@ -5,7 +5,7 @@ import * as rds from "aws-cdk-lib/aws-rds";
 import { Duration, RemovalPolicy } from "aws-cdk-lib";
 
 export interface DatabaseStackProps extends cdk.StackProps {
-     vpc: ec2.IVpc;
+    vpc: ec2.IVpc;
 }
 
 export class DatabaseStack extends cdk.NestedStack {
@@ -19,10 +19,13 @@ export class DatabaseStack extends cdk.NestedStack {
         });
 
         // Temporary solution for allowing access to the database from local machine during development.
-        dbSecurityGroup.addIngressRule(
-            ec2.Peer.ipv4(`${process.env.MY_IP}/32`),
-            ec2.Port.tcp(5432)
-        );
+        const myIp = process.env.MY_IP;
+        if (myIp) {
+            dbSecurityGroup.addIngressRule(
+                ec2.Peer.ipv4(`${myIp}/32`),
+                ec2.Port.tcp(5432)
+            );
+        }
 
         const db = new rds.DatabaseInstance(this, "PostgresDb", {
             vpc: props.vpc,

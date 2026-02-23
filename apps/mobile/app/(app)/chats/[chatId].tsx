@@ -25,8 +25,6 @@ export default function ChatScreen() {
 
     const { chatId } = useLocalSearchParams<{ chatId: string }>();
 
-    console.log("chatId:", chatId);
-
     const [messages, setMessages] = useState<Message[]>([]);
     const [text, setText] = useState("");
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -35,7 +33,6 @@ export default function ChatScreen() {
         if (!chatId) return;
 
         const items = await getMessagesForChat(chatId);
-        console.log("Loaded messages:", items);
 
         setMessages(items);
     }
@@ -46,12 +43,10 @@ export default function ChatScreen() {
 
         setText("");
 
-        await sendMessage(chatId, devUserId, trimmed);
+        await sendMessage(chatId, trimmed);
 
         await loadMessages();
     }
-
-    console.log(messages)
 
     useEffect(() => {
         loadMessages();
