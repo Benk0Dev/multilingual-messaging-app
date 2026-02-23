@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { router } from "expo-router";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { signUp, startSignIn, finishSignIn, finishFirstSignIn, logout } from "../../../src/auth/authService";
 import { getMe } from "../../../src/api/users";
@@ -109,6 +110,14 @@ export default function DevAuthTest() {
         >
           <Text>Get Me</Text>
         </Pressable>
+
+        <Pressable
+          style={{ borderWidth: 1, padding: 10, borderRadius: 8 }}
+          onPress={() => router.replace("/(app)/chats")}
+        >
+          <Text>Go to Chats</Text>
+        </Pressable>
+
         <Text style={{ marginTop: 10, fontFamily: "Courier" }}>{out}</Text>
       </ScrollView>
     </View>

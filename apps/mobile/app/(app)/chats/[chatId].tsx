@@ -10,16 +10,20 @@ import {
     View,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { getMessagesForChat, sendMessage } from "@/src/api/messages";
-import { getDevUserId } from "../../../src/devUser";
+import { getMessagesForChat, createMessageForChat } from "@/src/api/messages";
+import { getMe } from "@/src/api/users";
 
 export default function ChatScreen() {
-    const [devUserId, setDevUserIdState] = useState<string>("");
+    const [myUserId, setMyUserId] = useState<string | null>(null);
 
     useEffect(() => {
         (async () => {
-            const id = await getDevUserId();
-            setDevUserIdState(id ?? "");
+            try {
+                const res = await getMe();
+            setMyUserId(res.user.id);
+            } catch (e: any) {
+                console.error(e);
+            }
         })();
     }, []);
 
@@ -37,14 +41,14 @@ export default function ChatScreen() {
         setMessages(items);
     }
 
-    async function createMessage() {
+    async function sendMessage() {
         const trimmed = text.trim();
         if (!trimmed || !chatId) return;
 
         setText("");
 
-        await sendMessage(chatId, trimmed);
-
+        await createMessageForChat(chatId, trimmed);
+        
         await loadMessages();
     }
 
@@ -69,13 +73,14 @@ export default function ChatScreen() {
                 data={messages}
                 keyExtractor={(m) => m.id}
                 renderItem={({ item }) => {
-                const mine = item.sender.id === devUserId;
+                const mine = item.sender.id === myUserId;
 
                 return (
                     <View style={{ padding: 8, alignItems: mine ? "flex-end" : "flex-start" }}>
-                        <View style={{ maxWidth: "80%", padding: 10, borderWidth: 1, borderRadius: 12 }}>
-                            <Text style={{ fontSize: 12, opacity: 0.7 }}>{item.sender.displayName}</Text>
-                            <Text style={{ fontSize: 16 }}>{item.content.text}</Text>
+                        <View style={{ maxWidth: "80%", padding: 10, borderRadius: 12, backgroundColor: mine ? "lime" : "white" }}>
+                            <Text style={{ fontSize: 12, opacity: 0.7, alignSelf: mine ? "flex-end" : "flex-start" }}>{item.sender.displayName}</Text>
+                            <Text style={{ fontSize: 16, alignSelf: mine ? "flex-end" : "flex-start" }}>{item.content.text}</Text>
+                            <Text style={{ fontSize: 12, opacity: 0.7, alignSelf: mine ? "flex-end" : "flex-start" }}>{new Date(item.createdAt).toLocaleString("en-GB", { timeStyle: "short" })}</Text>
                         </View>
                     </View>
                 );
@@ -90,7 +95,7 @@ export default function ChatScreen() {
                     style={{ flex: 1, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, height: 44 }}
                 />
                 <Pressable
-                    onPress={() => createMessage().catch(() => {})}
+                    onPress={() => sendMessage().catch(() => {})}
                     style={{ marginLeft: 8, paddingHorizontal: 14, justifyContent: "center" }}
                 >
                 <Text style={{ fontWeight: "600" }}>Send</Text>

@@ -69,22 +69,24 @@ export async function createMessageForChat(input: {
         });
 
         return {
-            ...message,
-            id: message.id.toString(),
-            chat: {
-                id: message.chat.id.toString(),
-            },
-            sender: {
-                ...message.sender,
-                id: message.sender.id.toString(),
-            },
-            content: {
-                ...message.content,
-                id: message.content.id.toString(),
-            },
-            createdAt: message.createdAt.toISOString(),
-            updatedAt: message.updatedAt.toISOString(),
-        } satisfies Message;
+            message: {
+                    ...message,
+                id: message.id.toString(),
+                chat: {
+                    id: message.chat.id.toString(),
+                },
+                sender: {
+                    ...message.sender,
+                    id: message.sender.id.toString(),
+                },
+                content: {
+                    ...message.content,
+                    id: message.content.id.toString(),
+                },
+                createdAt: message.createdAt.toISOString(),
+                updatedAt: message.updatedAt.toISOString(),
+            } satisfies Message,
+        }
 
     });
 }

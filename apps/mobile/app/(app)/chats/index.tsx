@@ -1,31 +1,23 @@
 import { Chat } from "@app/shared-types/models";
 import { useEffect, useState } from "react";
-import { FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
-import { getChatsForUser } from "@/src/api/chats";
-import { getDevUserId, setDevUserId, clearDevUserId } from "../../../src/devUser";
+import { getChats } from "@/src/api/chats";
+import { getMe } from "@/src/api/users";
+import { logout } from "../../../src/auth/authService";
 
 export default function ChatsScreen() {
-  const [devUserId, setDevUserIdState] = useState<string | null>(null);
-  const [input, setInput] = useState("");
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const id = await getDevUserId();
-      setDevUserIdState(id);
-      if (id) setInput(id);
-    })();
-  }, []);
-
-  async function loadChats(userId: string) {
+  async function loadChats() {
     setLoading(true);
     setError(null);
 
     try {
-      const items = await getChatsForUser(userId);
+      const items = await getChats();
       setChats(items);
     } catch (e: any) {
       setError(e?.message ?? "Failed to load chats");
@@ -34,67 +26,56 @@ export default function ChatsScreen() {
     }
   }
 
+  async function loadMe() {
+    try {
+      const res = await getMe();
+      setMyUserId(res.user.id);
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to load me");
+    }
+    finally {
+      setLoading(false);
+    }
+  }
+
+  async function onLogout() {
+    console.log("logout");
+    await logout();
+    router.replace("/(auth)/test/dev-auth-test");
+  }
+
   useEffect(() => {
-    if (devUserId) loadChats(devUserId);
-  }, [devUserId]);
+    loadChats();
+    loadMe();
+  }, []);
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={{ padding: 12, borderBottomWidth: 1, gap: 8 }}>
-        <Text style={{ fontWeight: "600" }}>Dev userId (per device)</Text>
-        <TextInput
-          value={input}
-          onChangeText={setInput}
-          autoCapitalize="none"
-          placeholder="Paste userId (UUID)"
-          style={{ borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, height: 44 }}
-        />
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable
-            onPress={async () => {
-              const id = input.trim();
-              if (!id) return;
-              await setDevUserId(id);
-              setDevUserIdState(id);
-            }}
-            style={{ borderWidth: 1, borderRadius: 10, padding: 10 }}
-          >
-            <Text style={{ fontWeight: "600" }}>Save</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={async () => {
-              await clearDevUserId();
-              setDevUserIdState(null);
-              setChats([]);
-              setInput("");
-            }}
-            style={{ borderWidth: 1, borderRadius: 10, padding: 10 }}
-          >
-            <Text style={{ fontWeight: "600" }}>Clear</Text>
-          </Pressable>
-        </View>
-
-        {devUserId ? <Text>Current: {devUserId}</Text> : <Text>Set a userId to load chats.</Text>}
-        {error ? <Text>Error: {error}</Text> : null}
-      </View>
-
+    <View>
       <FlatList
         data={chats}
         keyExtractor={(c) => c.id}
         refreshing={loading}
-        onRefresh={() => (devUserId ? loadChats(devUserId) : undefined)}
+        onRefresh={() => loadChats()}
         renderItem={({ item }) => (
           <Pressable
             onPress={() => router.push({ pathname: "/chats/[chatId]", params: { chatId: item.id } })}
             style={{ padding: 16, borderBottomWidth: 1 }}
           >
             <Text style={{ fontSize: 16, fontWeight: "600" }}>
-              {item.id.slice(0, 8)}
+              {item.members.find((m) => m.id !== myUserId)?.displayName}
             </Text>
           </Pressable>
         )}
       />
+
+      {error && <Text style={{ color: "red", textAlign: "center", marginVertical: 16 }}>{error}</Text>}
+
+      <Pressable
+        onPress={() => onLogout()}
+        style={{ padding: 16, backgroundColor: "red" }}
+      >
+        <Text style={{ fontSize: 16, fontWeight: "600" }}>Logout</Text>
+      </Pressable>
     </View>
   );
 }

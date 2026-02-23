@@ -64,7 +64,7 @@ export async function createChat(input: { userIds: string[] }) {
     });
 }
 
-export async function getChatsByUser(userId: string) {
+export async function getChatsForUser(userId: string) {
     // TODO: order by last message
     const chats = await prisma.chat.findMany({
         where: {

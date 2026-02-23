@@ -5,7 +5,7 @@ import * as messagesService from "../services/messages.service";
 type CreateMessageBody = {
     content: {
         text: string;
-        originalLang: string | "en"; // temporary hardcoding
+        // originalLang: string;
     };
 };
 
@@ -19,12 +19,13 @@ export async function createMessageForChat(req: Request, res: Response) {
 
         const body = req.body as CreateMessageBody;
 
-        const me = await getUser({ id: req.auth!.sub });
-
         const message = await messagesService.createMessageForChat({
             chatId,
-            senderId: me.id,
-            content: body.content,
+            senderId: req.auth!.sub,
+            content: {
+                text: body.content.text,
+                originalLang: "en", // temporary hardcoding
+            },
         });
 
         return res.status(201).json({

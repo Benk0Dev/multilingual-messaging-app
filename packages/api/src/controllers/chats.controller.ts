@@ -29,15 +29,9 @@ export async function createChat(req: Request, res: Response) {
     }
 }
 
-export async function getChatsByUser(req: Request, res: Response) {
+export async function getChatsForMe(req: Request, res: Response) {
     try {
-        const { userId } = req.params;
-
-        if (!userId || Array.isArray(userId)) {
-            return res.status(400).json({ error: "userId required" });
-        }
-
-        const chats = await chatsService.getChatsByUser(userId);
+        const chats = await chatsService.getChatsForUser(req.auth!.sub);
 
         return res.status(201).json({
             chats,
