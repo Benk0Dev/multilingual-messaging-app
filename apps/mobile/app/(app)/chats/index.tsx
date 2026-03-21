@@ -32,14 +32,12 @@ export default function ChatsScreen() {
       setMyUserId(res.user.id);
     } catch (e: any) {
       setError(e?.message ?? "Failed to load me");
-    }
-    finally {
+    } finally {
       setLoading(false);
     }
   }
 
   async function onLogout() {
-    console.log("logout");
     await logout();
     router.replace("/(auth)/test/dev-auth-test");
   }
@@ -50,16 +48,22 @@ export default function ChatsScreen() {
   }, []);
 
   return (
-    <View>
+    <View style={{ flex: 1 }}>
       <FlatList
         data={chats}
         keyExtractor={(c) => c.id}
         refreshing={loading}
         onRefresh={() => loadChats()}
+        contentContainerStyle={{ paddingBottom: 16 }}
         renderItem={({ item }) => (
           <Pressable
             onPress={() => router.push({ pathname: "/chats/[chatId]", params: { chatId: item.id } })}
-            style={{ padding: 16, borderBottomWidth: 1 }}
+            style={({ pressed }) => ({
+              padding: 16,
+              borderBottomWidth: 1,
+              borderColor: "#e5e7eb",
+              opacity: pressed ? 0.85 : 1,
+            })}
           >
             <Text style={{ fontSize: 16, fontWeight: "600" }}>
               {item.members.find((m) => m.id !== myUserId)?.displayName}
@@ -68,13 +72,24 @@ export default function ChatsScreen() {
         )}
       />
 
-      {error && <Text style={{ color: "red", textAlign: "center", marginVertical: 16 }}>{error}</Text>}
+      {error && (
+        <Text style={{ color: "#ef4444", textAlign: "center", marginVertical: 16, paddingHorizontal: 16 }}>
+          {error}
+        </Text>
+      )}
 
       <Pressable
-        onPress={() => onLogout()}
-        style={{ padding: 16, backgroundColor: "red" }}
+        onPress={onLogout}
+        style={({ pressed }) => ({
+          marginHorizontal: 16,
+          marginBottom: 32,
+          backgroundColor: "#ef4444",
+          padding: 12,
+          borderRadius: 8,
+          opacity: pressed ? 0.85 : 1,
+        })}
       >
-        <Text style={{ fontSize: 16, fontWeight: "600" }}>Logout</Text>
+        <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600", textAlign: "center" }}>Log out</Text>
       </Pressable>
     </View>
   );
