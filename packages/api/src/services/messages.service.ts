@@ -1,5 +1,6 @@
 import { prisma } from "@app/db";
 import { Message } from "@app/shared-types/models";
+import { sendToUser } from "./realtime.service";
 
 export async function createMessageForChat(input: {
     chatId: string,
@@ -22,7 +23,7 @@ export async function createMessageForChat(input: {
         throw new Error("membership_not_found");
     }
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
         const messageContent = await tx.messageContent.create({
             data: {
                 text: input.content.text,
@@ -87,8 +88,23 @@ export async function createMessageForChat(input: {
                 updatedAt: message.updatedAt.toISOString(),
             } satisfies Message,
         }
-
     });
+
+    const recipientIds = (await prisma.chatMember.findMany({
+        where: { chatId: input.chatId },
+        select: { userId: true },
+    })).filter((member) => member.userId !== input.senderId).map((member) => member.userId);
+
+    try {
+        await Promise.all(recipientIds.map((recipientId) => sendToUser(recipientId, {
+            type: "message.created",
+            message: result.message,
+        })));
+    } catch (error) {
+        console.error("WebSocket fanout failed", error);
+    }
+
+    return result;
 }
 
 export async function getMessagesForChat(input: { chatId: string }) {

@@ -3,8 +3,13 @@ import { Construct } from "constructs"
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { DatabaseStack } from "./stacks/database-stack"
 import { AuthStack } from "./stacks/auth-stack"
+import { WebSocketStack } from "./stacks/websocket-stack"
 
 export class InfraStack extends cdk.Stack {
+    public readonly db: DatabaseStack;
+    public readonly auth: AuthStack;
+    public readonly ws: WebSocketStack;
+
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
 
@@ -17,7 +22,14 @@ export class InfraStack extends cdk.Stack {
             ],
         });
 
-        const db = new DatabaseStack(this, "Database", { vpc });
-        const auth = new AuthStack(this, "Auth");
+        this.db = new DatabaseStack(this, "Database", { vpc });
+        this.auth = new AuthStack(this, "Auth");
+        this.ws = new WebSocketStack(this, "WebSocket", {
+            cognito: {
+                region: this.region,
+                userPoolId: this.auth.userPool.userPoolId,
+                clientId: this.auth.userPoolClient.userPoolClientId,
+            },
+        });
     }
 }

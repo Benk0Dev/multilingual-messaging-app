@@ -4,11 +4,13 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from "aws-cdk-lib/aws-rds";
 import { Duration, RemovalPolicy } from "aws-cdk-lib";
 
-export interface DatabaseStackProps extends cdk.StackProps {
+export interface DatabaseStackProps extends cdk.NestedStackProps {
     vpc: ec2.IVpc;
 }
 
 export class DatabaseStack extends cdk.NestedStack {
+    public readonly db: rds.DatabaseInstance;
+
     constructor(scope: Construct, id: string, props: DatabaseStackProps) {
         super(scope, id, props);
 
@@ -27,7 +29,7 @@ export class DatabaseStack extends cdk.NestedStack {
             );
         }
 
-        const db = new rds.DatabaseInstance(this, "PostgresDb", {
+        this.db = new rds.DatabaseInstance(this, "PostgresDb", {
             vpc: props.vpc,
             // vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
             vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },

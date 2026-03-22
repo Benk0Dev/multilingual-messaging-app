@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { getUser } from "../services/users.service";
 import * as messagesService from "../services/messages.service";
 
 type CreateMessageBody = {

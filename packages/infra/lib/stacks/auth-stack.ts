@@ -4,11 +4,15 @@ import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as path from "path";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 
-export class AuthStack extends cdk.Stack {
-    constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+export class AuthStack extends cdk.NestedStack {
+    public readonly userPool: cognito.UserPool;
+    public readonly userPoolClient: cognito.UserPoolClient;
+    public readonly preSignUpFn: lambda.Function;
+
+    constructor(scope: Construct, id: string, props?: cdk.NestedStackProps) {
         super(scope, id, props);
 
-        const userPool = new cognito.UserPool(this, "UserPool", {
+        this.userPool = new cognito.UserPool(this, "UserPool", {
             signInAliases: { username: true, email: true },
             signInPolicy: {
                 allowedFirstAuthFactors: {
@@ -28,7 +32,7 @@ export class AuthStack extends cdk.Stack {
             removalPolicy: cdk.RemovalPolicy.DESTROY,
         });
 
-        const preSignUpFn = new lambda.Function(this, "PreSignUpTrigger", {
+        this.preSignUpFn = new lambda.Function(this, "PreSignUpTrigger", {
             runtime: lambda.Runtime.NODEJS_20_X,
             code: lambda.Code.fromAsset(
                 path.resolve(__dirname, "../../../lambdas/dist")
@@ -36,9 +40,9 @@ export class AuthStack extends cdk.Stack {
             handler: "triggers/preSignUp.handler",
         });
 
-        userPool.addTrigger(cognito.UserPoolOperation.PRE_SIGN_UP, preSignUpFn);
+        this.userPool.addTrigger(cognito.UserPoolOperation.PRE_SIGN_UP, this.preSignUpFn);
 
-        const userPoolClient = userPool.addClient("MobileClient", {
+        this.userPoolClient = this.userPool.addClient("MobileClient", {
             authFlows: {
                 userSrp: false,
                 userPassword: false,
@@ -51,11 +55,11 @@ export class AuthStack extends cdk.Stack {
         });
 
         new cdk.CfnOutput(this, "CognitoUserPoolId", {
-        value: userPool.userPoolId,
+            value: this.userPool.userPoolId,
         });
 
         new cdk.CfnOutput(this, "CognitoUserPoolClientId", {
-        value: userPoolClient.userPoolClientId,
+            value: this.userPoolClient.userPoolClientId,
         });
     }
 }
