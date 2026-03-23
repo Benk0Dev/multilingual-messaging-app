@@ -23,7 +23,7 @@ export async function createMessageForChat(input: {
         throw new Error("membership_not_found");
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const message = await prisma.$transaction(async (tx) => {
         const messageContent = await tx.messageContent.create({
             data: {
                 text: input.content.text,
@@ -70,24 +70,22 @@ export async function createMessageForChat(input: {
         });
 
         return {
-            message: {
-                    ...message,
-                id: message.id.toString(),
-                chat: {
-                    id: message.chat.id.toString(),
-                },
-                sender: {
-                    ...message.sender,
-                    id: message.sender.id.toString(),
-                },
-                content: {
-                    ...message.content,
-                    id: message.content.id.toString(),
-                },
-                createdAt: message.createdAt.toISOString(),
-                updatedAt: message.updatedAt.toISOString(),
-            } satisfies Message,
-        }
+            ...message,
+            id: message.id.toString(),
+            chat: {
+                id: message.chat.id.toString(),
+            },
+            sender: {
+                ...message.sender,
+                id: message.sender.id.toString(),
+            },
+            content: {
+                ...message.content,
+                id: message.content.id.toString(),
+            },
+            createdAt: message.createdAt.toISOString(),
+            updatedAt: message.updatedAt.toISOString(),
+        } satisfies Message;
     });
 
     const recipientIds = (await prisma.chatMember.findMany({
@@ -98,13 +96,13 @@ export async function createMessageForChat(input: {
     try {
         await Promise.all(recipientIds.map((recipientId) => sendToUser(recipientId, {
             type: "message.created",
-            message: result.message,
+            message,
         })));
     } catch (error) {
         console.error("WebSocket fanout failed", error);
     }
 
-    return result;
+    return message;
 }
 
 export async function getMessagesForChat(input: { chatId: string }) {

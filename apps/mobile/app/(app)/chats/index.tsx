@@ -47,6 +47,7 @@ export default function ChatsScreen() {
     loadMe();
   }, []);
 
+
   return (
     <View style={{ flex: 1 }}>
       <FlatList
@@ -83,7 +84,7 @@ export default function ChatsScreen() {
         style={({ pressed }) => ({
           marginHorizontal: 16,
           marginBottom: 32,
-          backgroundColor: "#ef4444",
+          backgroundColor: "#6b7280",
           padding: 12,
           borderRadius: 8,
           opacity: pressed ? 0.85 : 1,
