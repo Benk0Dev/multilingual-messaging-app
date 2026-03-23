@@ -47,7 +47,6 @@ export default function ChatScreen() {
 
             try {
                 const items = await getMessagesForChat(chatId);
-                console.log("Loaded messages", items);
                 setMessagesForChat(chatId, items);
             } catch (e: any) {
                 console.error(e);

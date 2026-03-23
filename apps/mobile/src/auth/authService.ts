@@ -7,6 +7,7 @@ import {
 import { clearSession } from "./session";
 import { usernameSchema, newUserDetailsSchema } from "@app/shared-types/schemas";
 import { Language } from "@app/shared-types/enums";
+import { useChatStore } from "../store/chatStore";
 
 function isEmailExistsError(err: any) {
     return err?.name === "EmailExistsException";
@@ -91,5 +92,6 @@ export async function finishFirstSignIn(params: {
 }
 
 export async function logout() {
+    useChatStore.getState().clearAll();
     await clearSession();
 }

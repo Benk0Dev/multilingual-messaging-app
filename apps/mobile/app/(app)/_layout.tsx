@@ -6,7 +6,9 @@ import { useChatStore } from "@/src/store/chatStore";
 
 export default function AppLayout() {
     const [accessToken, setAccessToken] = useState<string | null>(null);
+
     const appendMessage = useChatStore((state) => state.appendMessage);
+    const clearAllChats = useChatStore((state) => state.clearAll);
 
     useEffect(() => {
         let isActive = true;
@@ -23,8 +25,9 @@ export default function AppLayout() {
 
         return () => {
             isActive = false;
+            clearAllChats();
         };
-    }, []);
+    }, [clearAllChats]);
 
     const { isConnected } = useAppWebSocket({ 
         accessToken, 
@@ -37,7 +40,7 @@ export default function AppLayout() {
 
     return (
         <Stack>
-            <Stack.Screen name="chats/index" options={{ title: "Chats", headerShown: true }} />
+            <Stack.Screen name="chats/index" options={{ title: isConnected ? "Chats" : "Chats (offline)", headerShown: true }} />
             <Stack.Screen name="chats/[chatId]" options={{ title: "Chat", headerShown: true }} />
         </Stack>
     );
