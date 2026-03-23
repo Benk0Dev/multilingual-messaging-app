@@ -86,7 +86,14 @@ export default function ChatScreen() {
                         <View style={{ padding: 8, alignItems: mine ? "flex-end" : "flex-start" }}>
                             <View style={{ maxWidth: "80%", padding: 10, borderRadius: 12, backgroundColor: mine ? "skyblue" : "white" }}>
                                 <Text style={{ fontSize: 12, opacity: 0.7, alignSelf: mine ? "flex-end" : "flex-start" }}>{item.sender.displayName}</Text>
-                                <Text style={{ fontSize: 16, alignSelf: mine ? "flex-end" : "flex-start" }}>{item.content.text}</Text>
+                                {item.content.translation ? (
+                                    <>
+                                        <Text style={{ fontSize: 16, alignSelf: mine ? "flex-end" : "flex-start", textDecorationLine: "line-through" }}>{item.content.text}</Text>
+                                        <Text style={{ fontSize: 16, alignSelf: mine ? "flex-end" : "flex-start" }}>{item.content.translation.translatedText}</Text>
+                                    </>
+                                ) : (
+                                    <Text style={{ fontSize: 16, alignSelf: mine ? "flex-end" : "flex-start" }}>{item.content.text}</Text>
+                                )}
                                 <Text style={{ fontSize: 12, opacity: 0.7, alignSelf: mine ? "flex-end" : "flex-start" }}>{new Date(item.createdAt).toLocaleString("en-GB", { timeStyle: "short" })}</Text>
                             </View>
                         </View>

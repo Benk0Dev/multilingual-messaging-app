@@ -18,6 +18,7 @@
     "@app/shared-types": "^0.1.0",
     "@aws-sdk/client-apigatewaymanagementapi": "^3.1014.0",
     "@aws-sdk/client-dynamodb": "^3.1014.0",
+    "@aws-sdk/client-translate": "^3.1014.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jose": "^6.1.3",

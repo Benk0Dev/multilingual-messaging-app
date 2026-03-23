@@ -8,18 +8,11 @@ import {
     DynamoDBClient,
     QueryCommand,
   } from "@aws-sdk/client-dynamodb";
-  
-function requiredEnv(name: string): string {
-    const value = process.env[name];
-    if (!value) {
-        throw new Error(`${name} is missing`);
-    }
-    return value;
-}
+import { requiredEnv } from "../utils/requiredEnv";
   
 const endpoint = requiredEnv("WEBSOCKET_URL");
 const tableName = requiredEnv("WEBSOCKET_CONNECTIONS_TABLE");
-const region = requiredEnv("WEBSOCKET_REGION");
+const region = requiredEnv("AWS_REGION");
   
 const wsClient = new ApiGatewayManagementApiClient({
     region,

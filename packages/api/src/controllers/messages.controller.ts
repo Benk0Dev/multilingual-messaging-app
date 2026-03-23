@@ -4,7 +4,6 @@ import * as messagesService from "../services/messages.service";
 type CreateMessageBody = {
     content: {
         text: string;
-        // originalLang: string;
     };
 };
 
@@ -23,7 +22,6 @@ export async function createMessageForChat(req: Request, res: Response) {
             senderId: req.auth!.sub,
             content: {
                 text: body.content.text,
-                originalLang: "en", // temporary hardcoding
             },
         });
 
@@ -35,6 +33,10 @@ export async function createMessageForChat(req: Request, res: Response) {
 
         if (err.message === "membership_not_found") {
             return res.status(400).json({ error: "User is not a member of this chat" });
+        }
+
+        if (err.message === "sender_not_found") {
+            return res.status(400).json({ error: "Sender not found" });
         }
 
         return res.status(500).json({ error: "Internal server error" });
@@ -49,11 +51,23 @@ export async function getMessagesForChat(req: Request, res: Response) {
             return res.status(400).json({ error: "chatId required" });
         }
 
-        const messages = await messagesService.getMessagesForChat({ chatId });
+        const messages = await messagesService.getMessagesForChat({
+            userId: req.auth!.sub,
+            chatId,
+        });
 
         return res.json(messages);
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
+
+        if (err.message === "user_not_found") {
+            return res.status(400).json({ error: "User not found" });
+        }
+
+        if (err.message === "membership_not_found") {
+            return res.status(400).json({ error: "User is not a member of this chat" });
+        }
+
         return res.status(500).json({ error: "Internal server error" });
     }
 }

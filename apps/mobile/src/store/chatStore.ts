@@ -11,21 +11,45 @@ type ChatStore = {
     clearAll: () => void;
 };
 
-function dedupeMessages(messages: Message[]): Message[] {
-    const seen = new Set<string>();
-    const result: Message[] = [];
+function mergeMessage(existing: Message, incoming: Message): Message {
+    return {
+        ...existing,
+        ...incoming,
+        chat: {
+            ...existing.chat,
+            ...incoming.chat,
+        },
+        sender: {
+            ...existing.sender,
+            ...incoming.sender,
+        },
+        content: {
+            ...existing.content,
+            ...incoming.content,
+            translation:
+                incoming.content.translation ??
+                existing.content.translation,
+        },
+    };
+}
 
+function mergeMessages(messages: Message[]): Message[] {
+    const byId = new Map<string, Message>();
+  
     for (const message of messages) {
-        if (seen.has(message.id)) continue;
-        seen.add(message.id);
-        result.push(message);
+        const existing = byId.get(message.id);
+    
+        if (!existing) {
+            byId.set(message.id, message);
+            continue;
+        }
+    
+        byId.set(message.id, mergeMessage(existing, message));
     }
-
-    result.sort(
+  
+    return Array.from(byId.values()).sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
-
-    return result;
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
@@ -33,30 +57,29 @@ export const useChatStore = create<ChatStore>((set) => ({
     loadedChatIds: {},
 
     setMessagesForChat: (chatId, messages) =>
-        set((state) => ({
-            messagesByChatId: {
-                ...state.messagesByChatId,
-                [chatId]: dedupeMessages(messages),
-            },
-            loadedChatIds: {
-                ...state.loadedChatIds,
-                [chatId]: true,
-            },
-        })),
-
-    appendMessage: (chatId, message) =>
         set((state) => {
             const existing = state.messagesByChatId[chatId] ?? [];
-            const alreadyExists = existing.some((m) => m.id === message.id);
-
-            if (alreadyExists) {
-                return state;
-            }
 
             return {
                 messagesByChatId: {
                     ...state.messagesByChatId,
-                    [chatId]: dedupeMessages([...existing, message]),
+                    [chatId]: mergeMessages([...existing, ...messages]),
+                },
+                loadedChatIds: {
+                    ...state.loadedChatIds,
+                    [chatId]: true,
+                },
+            };
+        }),
+
+    appendMessage: (chatId, message) =>
+        set((state) => {
+            const existing = state.messagesByChatId[chatId] ?? [];
+
+            return {
+                messagesByChatId: {
+                    ...state.messagesByChatId,
+                    [chatId]: mergeMessages([...existing, message]),
                 },
             };
         }),

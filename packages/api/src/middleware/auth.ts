@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { createRemoteJWKSet, jwtVerify } from "jose";
+import { requiredEnv } from "../utils/requiredEnv";
 
 declare global {
     namespace Express {
@@ -13,13 +14,7 @@ declare global {
     }
 }
 
-function requiredEnv(name: string): string {
-    const v = process.env[name];
-    if (!v) throw new Error(`${name} is missing`);
-    return v;
-}
-
-const region = requiredEnv("COGNITO_REGION");
+const region = requiredEnv("AWS_REGION");
 const userPoolId = requiredEnv("COGNITO_USER_POOL_ID");
 const clientId = requiredEnv("COGNITO_USER_POOL_CLIENT_ID");
 
