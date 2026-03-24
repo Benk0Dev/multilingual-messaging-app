@@ -1,7 +1,7 @@
 import { prisma } from "@app/db";
 import { Chat } from "@app/shared-types/models";
 
-export async function createChat(input: { userIds: string[] }) {
+export async function createChat(input: { userIds: string[] }): Promise<Chat> {
     const validUserIds = await prisma.user.findMany({
         where: {
             id: {
@@ -60,11 +60,11 @@ export async function createChat(input: { userIds: string[] }) {
                 username: user.username,
                 displayName: user.displayName,
             })),
-        } satisfies Chat;
+        };
     });
 }
 
-export async function getChatsForUser(userId: string) {
+export async function getChatsForUser(userId: string): Promise<Chat[]> {
     // TODO: order by last message
     const chats = await prisma.chat.findMany({
         where: {
@@ -99,5 +99,5 @@ export async function getChatsForUser(userId: string) {
             ...member.user,
             id: member.user.id.toString(),
         })),
-    })) satisfies Chat[];
+    }));
 }

@@ -41,10 +41,28 @@ export async function getMe(req: Request, res: Response) {
             user: user,
         });
     } catch (err: any) {
+        console.error(err);
         if (err.message === "not_found") {
             return res.status(404).json({ error: "User not found" });
         }
 
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}
+
+export async function searchUsers(req: Request, res: Response) {
+    try {
+        const query = req.query.q?.toString() ?? "";
+
+        if (!query) {
+            return res.status(200).json({ users: [] });
+        }
+
+        const users = await usersService.searchUsers({ currentUserId: req.auth!.sub, query });
+
+        return res.status(200).json({ users: users });
+    } catch (err: any) {
+        console.error(err);
         return res.status(500).json({ error: "Internal server error" });
     }
 }

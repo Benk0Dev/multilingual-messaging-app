@@ -9,7 +9,7 @@ export async function createMessageForChat(input: {
     content: { 
         text: string;
     };
-}) {
+}): Promise<Message> {
     const membership = await prisma.chatMember.findUnique({
         where: {
             chatId_userId: {
@@ -135,7 +135,7 @@ export async function createMessageForChat(input: {
                 },
                 createdAt: message.createdAt.toISOString(),
                 updatedAt: message.updatedAt.toISOString(),
-            } satisfies Message,
+            },
             translations,
         };
     });
@@ -167,7 +167,7 @@ export async function createMessageForChat(input: {
     return result.message;
 }
 
-export async function getMessagesForChat(input: { userId: string, chatId: string }) {
+export async function getMessagesForChat(input: { userId: string, chatId: string }): Promise<{ messages: Message[] }> {
     const user = await prisma.user.findUnique({
         where: { id: input.userId },
         select: { preferredLang: true },
@@ -250,6 +250,6 @@ export async function getMessagesForChat(input: { userId: string, chatId: string
             },
             createdAt: message.createdAt.toISOString(),
             updatedAt: message.updatedAt.toISOString(),
-        })) satisfies Message[],
+        })),
     }
 }

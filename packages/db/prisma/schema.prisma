@@ -12,12 +12,14 @@ model User {
   username        String       @unique @map("username")
   displayName     String       @map("display_name")
   preferredLang   String       @map("preferred_lang")
+  pictureUrl      String?      @map("picture_url")
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
   chatMemberships ChatMember[]
   sentMessages    Message[]
 
   @@index([username])
+  @@index([displayName])
   @@map("users")
 }
 

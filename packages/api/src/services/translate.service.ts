@@ -10,7 +10,6 @@ export async function translateText(
     sourceLang: string,
     targetLang: string
 ) {
-    console.log("Translation request", { text, sourceLang, targetLang });
     const command = new TranslateTextCommand({
         Text: text,
         SourceLanguageCode: sourceLang,
@@ -18,8 +17,6 @@ export async function translateText(
     });
 
     const response = await client.send(command);
-
-    console.log("Translation response", response);
 
     return response.TranslatedText!;
 }
