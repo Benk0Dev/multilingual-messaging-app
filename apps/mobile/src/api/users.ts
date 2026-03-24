@@ -1,5 +1,5 @@
 import { api } from "./client";
-import { User } from "@app/shared-types/models";
+import { User, SearchUsersResult } from "@app/shared-types/models";
 
 export async function createUser(displayName: string, preferredLang: string) {
     return api<{ user: User }>(`/api/users`, {
@@ -12,4 +12,11 @@ export async function getMe() {
     return api<{ user: User }>(`/api/users/me`, {
         method: "GET",
     });
+}
+
+export async function searchUsers(query: string) {
+    return api<{ users: SearchUsersResult[] }>(`/api/users/search?q=${encodeURIComponent(query)}`, {
+            method: "GET",
+        },
+    );
 }

@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { createUser, getMe, searchUsers } from "../controllers/users.controller";
-import { createChat, getChatsForMe } from "../controllers/chats.controller";
+import { createChatAndSendFirstMessage, getChatsForMe } from "../controllers/chats.controller";
 import { createMessageForChat, getMessagesForChat } from "../controllers/messages.controller";
 
 const router = Router();
 
 // POST routes
 router.post("/users", createUser);
-router.post("/chats", createChat); 
+router.post("/chats", createChatAndSendFirstMessage); 
 router.post("/chats/:chatId/messages", createMessageForChat);
 
 // GET routes

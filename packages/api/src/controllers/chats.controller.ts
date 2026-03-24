@@ -1,18 +1,29 @@
 import { Request, Response } from "express";
 import * as chatsService from "../services/chats.service";
+import * as messagesService from "../services/messages.service";
+import { CreateMessageBody } from "./messages.controller";
 
-type CreateChatBody = {
-    userIds: string[];
+export type CreateChatAndSendFirstMessageBody = {
+    userIds: string[]; // not including the current user
+    content: CreateMessageBody["content"];
 };
 
-export async function createChat(req: Request, res: Response) {
+// TODO: Better to replace with find or create to avoid creating duplicate chats
+export async function createChatAndSendFirstMessage(req: Request, res: Response) {
     try {
-        const body = req.body as CreateChatBody;
+        const body = req.body as CreateChatAndSendFirstMessageBody;
 
-        const chat = await chatsService.createChat({ userIds: body.userIds });
+        const chat = await chatsService.createChat({ userIds: [req.auth!.sub, ...body.userIds] });
+
+        const message = await messagesService.createMessageForChat({
+            chatId: chat.id,
+            senderId: req.auth!.sub,
+            content: body.content,
+        });
 
         return res.status(201).json({
             chat,
+            message,
         });
     } catch (err: any) {
         console.error(err);
@@ -23,6 +34,14 @@ export async function createChat(req: Request, res: Response) {
 
         if (err.message === "already_exists") {
             return res.status(400).json({ error: "A chat with the specified users already exists" });
+        }
+
+        if (err.message === "content_empty") {
+            return res.status(400).json({ error: "Content is empty" });
+        }
+
+        if (err.message === "sender_not_found") {
+            return res.status(400).json({ error: "Sender not found" });
         }
         
         return res.status(500).json({ error: "Internal server error" });

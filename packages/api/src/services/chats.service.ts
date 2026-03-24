@@ -12,6 +12,7 @@ export async function createChat(input: { userIds: string[] }): Promise<Chat> {
             id: true,
             username: true,
             displayName: true,
+            pictureUrl: true,
         },
     });
 
@@ -59,6 +60,7 @@ export async function createChat(input: { userIds: string[] }): Promise<Chat> {
                 id: user.id.toString(),
                 username: user.username,
                 displayName: user.displayName,
+                pictureUrl: user.pictureUrl,
             })),
         };
     });
@@ -84,6 +86,7 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
                             id: true,
                             username: true,
                             displayName: true,
+                            pictureUrl: true,
                         },
                     },
                 },

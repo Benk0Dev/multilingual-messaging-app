@@ -10,6 +10,10 @@ export async function createMessageForChat(input: {
         text: string;
     };
 }): Promise<Message> {
+    if (input.content.text.trim() === "") {
+        throw new Error("content_empty");
+    }
+
     const membership = await prisma.chatMember.findUnique({
         where: {
             chatId_userId: {

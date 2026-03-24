@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import * as messagesService from "../services/messages.service";
 
-type CreateMessageBody = {
+export type CreateMessageBody = {
     content: {
         text: string;
     };
@@ -30,6 +30,10 @@ export async function createMessageForChat(req: Request, res: Response) {
         });
     } catch (err: any) {
         console.error(err);
+
+        if (err.message === "content_empty") {
+            return res.status(400).json({ error: "Content is empty" });
+        }
 
         if (err.message === "membership_not_found") {
             return res.status(400).json({ error: "User is not a member of this chat" });
