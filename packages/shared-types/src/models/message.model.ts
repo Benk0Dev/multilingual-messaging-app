@@ -9,3 +9,12 @@ export type Message = {
     createdAt: string;
     updatedAt: string;
 }
+
+export type LastMessage = {
+    id: string;
+    content: MessageContent;
+    sender: UserLite;
+    isDeleted: boolean;
+    createdAt: string;
+    updatedAt: string;
+}

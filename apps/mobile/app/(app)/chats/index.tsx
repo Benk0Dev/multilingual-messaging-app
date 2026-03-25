@@ -1,7 +1,6 @@
 import { Chat, type SearchUsersResult } from "@app/shared-types/models";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useFocusEffect } from "@react-navigation/native";
 import {
   ActivityIndicator,
   FlatList,
@@ -19,6 +18,7 @@ import { router } from "expo-router";
 import { getChats } from "@/src/api/chats";
 import { getMe, searchUsers } from "@/src/api/users";
 import { logout } from "../../../src/auth/authService";
+import { useChatStore } from "@/src/store/chatStore";
 
 const SEARCH_DEBOUNCE_MS = 380;
 
@@ -38,11 +38,12 @@ function PeerAvatar({ displayName }: { displayName: string }) {
 
 export default function ChatsScreen() {
   const insets = useSafeAreaInsets();
-  const [chats, setChats] = useState<Chat[]>([]);
+  const chats = useChatStore((state) => state.chats);
+  const setChats = useChatStore((state) => state.setChats);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
-
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUsersResult[]>([]);
@@ -50,7 +51,7 @@ export default function ChatsScreen() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const searchInputRef = useRef<TextInput>(null);
 
-  async function loadChats() {
+  const loadChats = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -62,7 +63,7 @@ export default function ChatsScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [setChats]);
 
   async function loadMe() {
     try {
@@ -80,11 +81,9 @@ export default function ChatsScreen() {
     router.replace("/(auth)/test/dev-auth-test");
   }
 
-  useFocusEffect(useCallback(() => {
-    (async () => {
-      await loadChats();
-    })();
-  }, []));
+  useEffect(() => {
+    void loadChats();
+  }, [loadChats]);
 
   useEffect(() => {
     (async () => {
@@ -202,7 +201,17 @@ export default function ChatsScreen() {
         renderItem={({ item }) => {
           const peer = getPeer(item, myUserId);
           const title = peer?.displayName ?? "Chat";
-          const subtitle = peer?.username ? `@${peer.username}` : null;
+          const last = item.lastMessage;
+          const lastOriginalText = last?.content.text ?? "";
+          const lastTranslatedText = last?.content.translation?.translatedText ?? null;
+          const lastPreview =
+            last && myUserId && last.sender.id === myUserId
+              ? `You: ${lastOriginalText}`
+              : lastTranslatedText ?? lastOriginalText;
+          const lastTime =
+            last?.createdAt
+              ? new Date(last.createdAt).toLocaleString("en-GB", { timeStyle: "short" })
+              : null;
 
           return (
             <Pressable
@@ -217,13 +226,16 @@ export default function ChatsScreen() {
                 <Text style={styles.chatTitle} numberOfLines={1}>
                   {title}
                 </Text>
-                {subtitle ? (
-                  <Text style={styles.chatSubtitle} numberOfLines={1}>
-                    {subtitle}
-                  </Text>
+
+                {last ? (
+                  <View style={styles.chatLastRow}>
+                    <Text style={styles.chatPreview} numberOfLines={1}>
+                      {lastPreview}
+                    </Text>
+                    {lastTime ? <Text style={styles.chatTime}>{lastTime}</Text> : null}
+                  </View>
                 ) : null}
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#98A2B3" />
             </Pressable>
           );
         }}
@@ -536,10 +548,21 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#121926",
   },
-  chatSubtitle: {
-    fontSize: 14,
+  chatLastRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+    gap: 10,
+  },
+  chatPreview: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
     color: "#667085",
-    marginTop: 2,
+  },
+  chatTime: {
+    fontSize: 12,
+    color: "#98A2B3",
   },
   errorBanner: {
     flexDirection: "row",

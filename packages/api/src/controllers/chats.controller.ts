@@ -8,12 +8,11 @@ export type CreateChatAndSendFirstMessageBody = {
     content: CreateMessageBody["content"];
 };
 
-// TODO: Better to replace with find or create to avoid creating duplicate chats
-export async function createChatAndSendFirstMessage(req: Request, res: Response) {
+export async function findOrCreateChatAndSendFirstMessage(req: Request, res: Response) {
     try {
         const body = req.body as CreateChatAndSendFirstMessageBody;
 
-        const chat = await chatsService.createChat({ userIds: [req.auth!.sub, ...body.userIds] });
+        const chat = await chatsService.findOrCreateChat({ userIds: [req.auth!.sub, ...body.userIds] });
 
         const message = await messagesService.createMessageForChat({
             chatId: chat.id,
@@ -30,10 +29,6 @@ export async function createChatAndSendFirstMessage(req: Request, res: Response)
 
         if (err.message === "invalid_user_ids") {
             return res.status(400).json({ error: "One or more user IDs are invalid" });
-        }
-
-        if (err.message === "already_exists") {
-            return res.status(400).json({ error: "A chat with the specified users already exists" });
         }
 
         if (err.message === "content_empty") {

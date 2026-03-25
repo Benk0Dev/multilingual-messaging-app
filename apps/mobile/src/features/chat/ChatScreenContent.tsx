@@ -60,6 +60,7 @@ export default function ChatScreenContent(props: Props) {
     const isLoaded = useChatStore((state) => 
         activeChatId ? state.loadedChatIds[activeChatId] ?? false : false
     );
+    const appendChat = useChatStore((state) => state.appendChat);
     const setMessagesForChat = useChatStore((state) => state.setMessagesForChat);
     const appendMessage = useChatStore((state) => state.appendMessage);
 
@@ -113,11 +114,10 @@ export default function ChatScreenContent(props: Props) {
                     text: trimmed,
                 });
 
-                // Promote to live chat
-                setActiveChatId(chat.id);
 
-                // Set messages for new chat
-                setMessagesForChat(chat.id, [message]);
+                setActiveChatId(chat.id);
+                appendChat(chat.id, chat);
+                appendMessage(chat.id, message);
 
                 return;
             }

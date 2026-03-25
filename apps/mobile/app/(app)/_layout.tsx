@@ -7,6 +7,7 @@ import { useChatStore } from "@/src/store/chatStore";
 export default function AppLayout() {
     const [accessToken, setAccessToken] = useState<string | null>(null);
 
+    const appendChat = useChatStore((state) => state.appendChat);
     const appendMessage = useChatStore((state) => state.appendMessage);
     const clearAllChats = useChatStore((state) => state.clearAll);
 
@@ -32,6 +33,10 @@ export default function AppLayout() {
     const { isConnected } = useAppWebSocket({ 
         accessToken, 
         onEvent: (event) => {
+            if (event.type === "chat.created") {
+                appendChat(event.chat.id, event.chat);
+            }
+
             if (event.type === "message.created") {
                 appendMessage(event.message.chat.id, event.message);
             }
