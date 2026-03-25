@@ -82,3 +82,26 @@ export async function verifyEmailOtp(
   
     return result;
 }
+
+export async function refreshAuthSession(refreshToken: string) {
+    const res = await client.send(
+        new InitiateAuthCommand({
+            ClientId: COGNITO_USER_POOL_CLIENT_ID,
+            AuthFlow: "REFRESH_TOKEN_AUTH",
+            AuthParameters: {
+                REFRESH_TOKEN: refreshToken,
+            },
+        })
+    );
+
+    const result = res.AuthenticationResult;
+    if (!result?.AccessToken || !result?.IdToken || !result?.ExpiresIn) {
+        throw new Error("No refresh auth result");
+    }
+
+    return {
+        accessToken: result.AccessToken,
+        idToken: result.IdToken,
+        expiresIn: result.ExpiresIn,
+    };
+}
