@@ -75,3 +75,37 @@ export async function getMessagesForChat(req: Request, res: Response) {
         return res.status(500).json({ error: "Internal server error" });
     }
 }
+
+type UpdateMessageReceiptBody = {
+    messageIds: string[];
+};
+
+export async function markMessagesAsDeliveredOrRead(req: Request, res: Response, type: "delivered" | "read") {
+    try {
+        const body = req.body as UpdateMessageReceiptBody;
+        const messageIds = Array.isArray(body.messageIds) ? body.messageIds : [body.messageIds];
+
+        if (messageIds.length === 0) {
+            return res.status(400).json({ error: "messageIds required" });
+        }
+
+        await messagesService.markMessagesAsDeliveredOrRead({
+            recipientId: req.auth!.sub,
+            messageIds,
+            type,
+        });
+
+        return res.json({ success: true });
+    } catch (err: any) {
+        console.error(err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}
+
+export async function markMessagesAsDelivered(req: Request, res: Response) {
+    return await markMessagesAsDeliveredOrRead(req, res, "delivered");
+}
+
+export async function markMessagesAsRead(req: Request, res: Response) {
+    return await markMessagesAsDeliveredOrRead(req, res, "read");
+}

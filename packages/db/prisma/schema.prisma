@@ -8,15 +8,16 @@ datasource db {
 }
 
 model User {
-  id              String       @id @default(uuid()) @map("id") @db.Uuid
-  username        String       @unique @map("username")
-  displayName     String       @map("display_name")
-  preferredLang   String       @map("preferred_lang")
-  pictureUrl      String?      @map("picture_url")
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
+  id              String           @id @default(uuid()) @map("id") @db.Uuid
+  username        String           @unique @map("username")
+  displayName     String           @map("display_name")
+  preferredLang   String           @map("preferred_lang")
+  pictureUrl      String?          @map("picture_url")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
   chatMemberships ChatMember[]
   sentMessages    Message[]
+  messageReceipts MessageReceipt[]
 
   @@index([username])
   @@index([displayName])
@@ -44,16 +45,17 @@ model ChatMember {
 }
 
 model Message {
-  id        String         @id @default(uuid()) @map("id") @db.Uuid
-  chatId    String         @map("chat_id") @db.Uuid
-  senderId  String         @map("sender_id") @db.Uuid
-  contentId String         @unique @map("content_id") @db.Uuid
-  isDeleted Boolean        @default(false) @map("is_deleted")
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @updatedAt @map("updated_at")
-  chat      Chat           @relation(fields: [chatId], references: [id])
-  content   MessageContent @relation(fields: [contentId], references: [id])
-  sender    User           @relation(fields: [senderId], references: [id])
+  id        String           @id @default(uuid()) @map("id") @db.Uuid
+  chatId    String           @map("chat_id") @db.Uuid
+  senderId  String           @map("sender_id") @db.Uuid
+  contentId String           @unique @map("content_id") @db.Uuid
+  isDeleted Boolean          @default(false) @map("is_deleted")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+  chat      Chat             @relation(fields: [chatId], references: [id])
+  content   MessageContent   @relation(fields: [contentId], references: [id])
+  sender    User             @relation(fields: [senderId], references: [id])
+  receipts  MessageReceipt[]
 
   @@index([chatId, createdAt(sort: Desc)])
   @@map("messages")
@@ -82,4 +84,19 @@ model MessageTranslation {
   @@id([contentId, targetLang])
   @@index([contentId])
   @@map("message_translations")
+}
+
+model MessageReceipt {
+  messageId   String    @map("message_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  deliveredAt DateTime? @map("delivered_at")
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  message     Message   @relation(fields: [messageId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@id([messageId, userId])
+  @@index([messageId])
+  @@index([userId, readAt])
+  @@map("message_receipts")
 }

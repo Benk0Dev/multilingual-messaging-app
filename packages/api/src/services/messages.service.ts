@@ -1,5 +1,5 @@
 import { prisma } from "@app/db";
-import { Message } from "@app/shared-types/models";
+import { Message, MessageReceiptUpdate } from "@app/shared-types/models";
 import { sendToUser } from "./realtime.service";
 import { translateText } from "./translate.service";
 
@@ -58,6 +58,19 @@ export async function createMessageForChat(input: {
         },
     });
 
+    let translations: { recipientId: string; targetLang: string; translatedText: string }[] = [];
+
+    if (requiredTranslations.length > 0) {
+        translations = await Promise.all(requiredTranslations.map(async (translation) => {
+            const translatedText = await translateText(input.content.text, senderLang, translation.preferredLang);
+            return {
+                recipientId: translation.id,
+                targetLang: translation.preferredLang,
+                translatedText: translatedText,
+            };
+        }));
+    }
+
     const result = await prisma.$transaction(async (tx) => {
         const messageContent = await tx.messageContent.create({
             data: {
@@ -70,24 +83,6 @@ export async function createMessageForChat(input: {
                 originalLang: true,
             },
         });
-
-        let translations: { recipientId: string; targetLang: string; translatedText: string }[] = [];
-
-        if (requiredTranslations.length > 0) {
-            translations = await Promise.all(requiredTranslations.map(async (translation) => {
-                const translatedText = await translateText(input.content.text, senderLang, translation.preferredLang);
-                return {
-                    recipientId: translation.id,
-                    targetLang: translation.preferredLang,
-                    translatedText: translatedText,
-                };
-            }));
-            await tx.messageTranslation.createMany({ data: translations.map((translation) => ({
-                contentId: messageContent.id,
-                targetLang: translation.targetLang,
-                translatedText: translation.translatedText,
-            })) });
-        }
 
         const message = await tx.message.create({
             data: {
@@ -120,6 +115,23 @@ export async function createMessageForChat(input: {
                 createdAt: true,
                 updatedAt: true,
             },
+        });
+
+        if (translations.length > 0) {
+            await tx.messageTranslation.createMany({ 
+                data: translations.map((translation) => ({
+                    contentId: messageContent.id,
+                    targetLang: translation.targetLang,
+                    translatedText: translation.translatedText,
+                })),
+            });
+        }
+
+        await tx.messageReceipt.createMany({
+            data: recipientIds.map((recipientId) => ({
+                messageId: message.id,
+                userId: recipientId,
+            })),
         });
 
         return { 
@@ -230,6 +242,18 @@ export async function getMessagesForChat(input: { userId: string, chatId: string
             isDeleted: true,
             createdAt: true,
             updatedAt: true,
+            receipts: {
+                select: {
+                    userId: true,
+                    message: {
+                        select: {
+                            senderId: true,
+                        },
+                    },
+                    deliveredAt: true,
+                    readAt: true,
+                },
+            },
         },
     });
 
@@ -252,8 +276,90 @@ export async function getMessagesForChat(input: { userId: string, chatId: string
                     translatedText: message.content.translations[0]!.translatedText,
                 } : undefined,
             },
+            receipts: message.receipts
+                .filter((receipt) => receipt.message.senderId === input.userId)
+                .map((receipt) => ({
+                    userId: receipt.userId.toString(),
+                    deliveredAt: receipt.deliveredAt?.toISOString() ?? null,
+                    readAt: receipt.readAt?.toISOString() ?? null,
+                })),
             createdAt: message.createdAt.toISOString(),
             updatedAt: message.updatedAt.toISOString(),
         })),
+    }
+}
+
+export async function markMessagesAsDeliveredOrRead(input: {
+    recipientId: string,
+    messageIds: string[],
+    type: "delivered" | "read",
+}): Promise<void> {
+    const pendingReceipts = await prisma.messageReceipt.findMany({
+        where: {
+            messageId: {
+                in: input.messageIds,
+            },
+            userId: input.recipientId,
+            [input.type === "delivered" ? "deliveredAt" : "readAt"]: null,
+        },
+        select: {
+            message: {
+                select: {
+                    id: true,
+                    senderId: true,
+                },
+            },
+        },
+    });
+
+    const messageIdsToUpdate = pendingReceipts.filter((receipt) => receipt.message.senderId !== input.recipientId).map((receipt) => receipt.message.id);
+
+    if (messageIdsToUpdate.length === 0) {
+        return;
+    }
+
+    const timestamp = new Date();
+
+    await prisma.messageReceipt.updateMany({
+        where: {
+            messageId: {
+                in: messageIdsToUpdate,
+            },
+            userId: input.recipientId,
+            [input.type === "delivered" ? "deliveredAt" : "readAt"]: null,
+        },
+        data: {
+            [input.type === "delivered" ? "deliveredAt" : "readAt"]: timestamp,
+        },
+    });
+
+    try {
+        const updatesBySender = new Map<string, MessageReceiptUpdate[]>();
+
+        for (const receipt of pendingReceipts) {
+            const senderId = receipt.message.senderId;
+            if (senderId === input.recipientId) continue;
+
+            const update: MessageReceiptUpdate = {
+                messageId: receipt.message.id,
+                userId: input.recipientId,
+                [input.type === "delivered" ? "deliveredAt" : "readAt"]: timestamp.toISOString(),
+            };
+
+            const list = updatesBySender.get(senderId) ?? [];
+            list.push(update);
+            updatesBySender.set(senderId, list);
+        }
+
+        await Promise.all(
+            Array.from(updatesBySender.entries()).map(([senderId, updates]) =>
+                sendToUser(senderId, {
+                    type: "message.receipt.updated",
+                    data: updates,
+                }),
+            ),
+        );
+    } catch (error) {
+        console.error("WebSocket fanout failed", error);
     }
 }

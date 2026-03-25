@@ -1,18 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { WEBSOCKET_URL } from "../../src/config";
-import { Chat, Message } from "@app/shared-types/models";
-
-type MessageCreatedEvent = {
-    type: "message.created";
-    message: Message;
-};
+import { Chat, Message, MessageReceiptUpdate } from "@app/shared-types/models";
 
 type ChatCreatedEvent = {
     type: "chat.created";
     chat: Chat;
 };
 
-type WsEvent = MessageCreatedEvent | ChatCreatedEvent;
+type MessageCreatedEvent = {
+    type: "message.created";
+    message: Message;
+};
+
+type MessageDeliveredEvent = {
+    type: "message.receipt.updated";
+    data: MessageReceiptUpdate[];
+};
+
+type WsEvent = MessageCreatedEvent | ChatCreatedEvent | MessageDeliveredEvent;
 
 type UseAppWebSocketParams = {
     accessToken: string | null;

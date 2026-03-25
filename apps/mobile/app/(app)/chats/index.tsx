@@ -1,6 +1,6 @@
-import { Chat, type SearchUsersResult } from "@app/shared-types/models";
+import { Chat, type Message, type SearchUsersResult } from "@app/shared-types/models";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -27,6 +27,17 @@ function getPeer(chat: Chat, myUserId: string | null) {
   return chat.members.find((m) => m.id !== myUserId) ?? chat.members[0] ?? null;
 }
 
+function countUnreadForChat(messages: Message[] | undefined, myUserId: string): number {
+  if (!messages?.length) return 0;
+  let n = 0;
+  for (const m of messages) {
+    if (m.isDeleted || m.sender.id === myUserId) continue;
+    const mine = m.receipts?.find((r) => r.userId === myUserId);
+    if (!mine || !mine.readAt) n += 1;
+  }
+  return n;
+}
+
 function PeerAvatar({ displayName }: { displayName: string }) {
   const initial = displayName.trim().slice(0, 1).toUpperCase() || "?";
   return (
@@ -40,6 +51,7 @@ export default function ChatsScreen() {
   const insets = useSafeAreaInsets();
   const chats = useChatStore((state) => state.chats);
   const setChats = useChatStore((state) => state.setChats);
+  const messagesByChatId = useChatStore((state) => state.messagesByChatId);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +62,15 @@ export default function ChatsScreen() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const searchInputRef = useRef<TextInput>(null);
+
+  const unreadByChatId = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!myUserId) return map;
+    for (const c of chats) {
+      map[c.id] = countUnreadForChat(messagesByChatId[c.id], myUserId);
+    }
+    return map;
+  }, [chats, messagesByChatId, myUserId]);
 
   const loadChats = useCallback(async () => {
     setLoading(true);
@@ -201,6 +222,7 @@ export default function ChatsScreen() {
         renderItem={({ item }) => {
           const peer = getPeer(item, myUserId);
           const title = peer?.displayName ?? "Chat";
+          const unread = unreadByChatId[item.id] ?? 0;
           const last = item.lastMessage;
           const lastOriginalText = last?.content.text ?? "";
           const lastTranslatedText = last?.content.translation?.translatedText ?? null;
@@ -223,19 +245,27 @@ export default function ChatsScreen() {
             >
               <PeerAvatar displayName={title} />
               <View style={styles.chatRowText}>
-                <Text style={styles.chatTitle} numberOfLines={1}>
+                <Text style={[styles.chatTitle, unread > 0 && styles.chatTitleUnread]} numberOfLines={1}>
                   {title}
                 </Text>
 
                 {last ? (
                   <View style={styles.chatLastRow}>
-                    <Text style={styles.chatPreview} numberOfLines={1}>
+                    <Text
+                      style={[styles.chatPreview, unread > 0 && styles.chatPreviewUnread]}
+                      numberOfLines={1}
+                    >
                       {lastPreview}
                     </Text>
                     {lastTime ? <Text style={styles.chatTime}>{lastTime}</Text> : null}
                   </View>
                 ) : null}
               </View>
+              {unread > 0 ? (
+                <View style={styles.unreadBadge} accessibilityLabel={`${unread} unread`}>
+                  <Text style={styles.unreadBadgeText}>{unread > 99 ? "99+" : unread}</Text>
+                </View>
+              ) : null}
             </Pressable>
           );
         }}
@@ -548,6 +578,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#121926",
   },
+  chatTitleUnread: {
+    fontWeight: "800",
+    color: "#0C111D",
+  },
   chatLastRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -559,6 +593,26 @@ const styles = StyleSheet.create({
     minWidth: 0,
     fontSize: 13,
     color: "#667085",
+  },
+  chatPreviewUnread: {
+    color: "#344054",
+    fontWeight: "600",
+  },
+  unreadBadge: {
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 7,
+    marginLeft: 10,
+    borderRadius: 12,
+    backgroundColor: "#2F80ED",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unreadBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
   },
   chatTime: {
     fontSize: 12,

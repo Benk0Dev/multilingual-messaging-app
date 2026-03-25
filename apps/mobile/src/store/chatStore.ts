@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Chat, LastMessage, Message } from "@app/shared-types/models";
+import type { Chat, LastMessage, Message, MessageReceipt, MessageReceiptUpdate } from "@app/shared-types/models";
 
 type ChatStore = {
     messagesByChatId: Record<string, Message[]>;
@@ -12,6 +12,7 @@ type ChatStore = {
 
     setMessagesForChat: (chatId: string, messages: Message[]) => void;
     appendMessage: (chatId: string, message: Message) => void;
+    setMessageReceipt: (messageId: string, userId: string, receipt: Omit<MessageReceiptUpdate, "messageId" | "userId">) => void;
     clearChat: (chatId: string) => void;
     clearAll: () => void;
 };
@@ -62,7 +63,35 @@ function mergeMessage(existing: Message, incoming: Message): Message {
                 incoming.content.translation ??
                 existing.content.translation,
         },
+        receipts: incoming.receipts !== undefined ? incoming.receipts : existing.receipts,
     };
+}
+
+function upsertReceipt(
+    existingReceipts: MessageReceipt[],
+    userId: string,
+    updates: Omit<MessageReceiptUpdate, "messageId" | "userId">
+): MessageReceipt[] {
+    const idx = existingReceipts.findIndex((r) => r.userId === userId);
+    if (idx === -1) {
+        return [
+            ...existingReceipts,
+            {
+                userId,
+                deliveredAt: updates.deliveredAt,
+                readAt: updates.readAt,
+            },
+        ];
+    }
+
+    const existing = existingReceipts[idx];
+    const next: MessageReceipt = {
+        ...existing,
+        deliveredAt: updates.deliveredAt !== undefined ? updates.deliveredAt : existing.deliveredAt,
+        readAt: updates.readAt !== undefined ? updates.readAt : existing.readAt,
+    };
+
+    return existingReceipts.map((r, i) => (i === idx ? next : r));
 }
 
 function mergeMessages(messages: Message[]): Message[] {
@@ -155,6 +184,33 @@ export const useChatStore = create<ChatStore>((set) => ({
                           )
                         : state.chats,
             };
+        }),
+
+    setMessageReceipt: (messageId, userId, receiptUpdates) =>
+        set((state) => {
+            const nextMessagesByChatId: Record<string, Message[]> = {};
+            let didChange = false;
+
+            for (const [chatId, messages] of Object.entries(state.messagesByChatId)) {
+                const nextMessages = messages.map((m) => {
+                    if (m.id !== messageId) return m;
+                    const receipts = m.receipts ?? [];
+                    didChange = true;
+                    return {
+                        ...m,
+                        receipts: upsertReceipt(receipts, userId, receiptUpdates),
+                    };
+                });
+
+                const unchanged =
+                    nextMessages.length === messages.length &&
+                    nextMessages.every((m, i) => m === messages[i]);
+
+                nextMessagesByChatId[chatId] = unchanged ? messages : nextMessages;
+            }
+
+            if (!didChange) return state;
+            return { messagesByChatId: nextMessagesByChatId };
         }),
 
     clearChat: (chatId) =>

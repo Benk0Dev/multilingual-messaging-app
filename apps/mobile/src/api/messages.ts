@@ -14,3 +14,17 @@ export async function createMessageForChat(chatId: string, text: string) {
     });
     return data.message;
 }
+
+export async function markMessagesAsDelivered(messageIds: string[]) {
+    await api(`/api/messages/delivered`, {
+        method: "POST",
+        body: JSON.stringify({ messageIds }),
+    });
+}
+
+export async function markMessagesAsRead(messageIds: string[]) {
+    await api(`/api/messages/read`, {
+        method: "POST",
+        body: JSON.stringify({ messageIds }),
+    });
+}
