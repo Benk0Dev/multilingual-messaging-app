@@ -6,7 +6,7 @@ import {
 } from "./cognito";
 import { clearSession } from "./session";
 import { usernameSchema, newUserDetailsSchema } from "@app/shared-types/schemas";
-import { Language } from "@app/shared-types/enums";
+import { LanguageCode } from "@app/shared-types/enums";
 import { useChatStore } from "../store/chatStore";
 
 function isEmailExistsError(err: any) {
@@ -71,7 +71,7 @@ export async function finishFirstSignIn(params: {
     session: string;
     code: string;
     displayName: string;
-    preferredLang: Language;
+    preferredLang: LanguageCode;
 }) {
     try {
         const validatedNewUserDetails = newUserDetailsSchema.safeParse({

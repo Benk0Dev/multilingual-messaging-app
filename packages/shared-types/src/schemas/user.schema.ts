@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Language } from "../enums/index.js";
+import { LanguageCode } from "../enums/index.js";
 
 export const usernameSchema = z
     .string()
@@ -9,7 +9,7 @@ export const usernameSchema = z
 
 export const newUserDetailsSchema = z.object({
     displayName: z.string().min(1).max(255),
-    preferredLang: z.nativeEnum(Language),
+    preferredLang: z.nativeEnum(LanguageCode),
 });
 
 export type NewUserDetails = z.infer<typeof newUserDetailsSchema>;

@@ -3,7 +3,7 @@ import { router } from "expo-router";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { signUp, startSignIn, finishSignIn, finishFirstSignIn, logout } from "../../../src/auth/authService";
 import { getMe } from "../../../src/api/users";
-import { Language } from "@app/shared-types/enums";
+import { LanguageCode } from "@app/shared-types/enums";
 
 const fieldStyle = { borderWidth: 1, padding: 10, borderRadius: 8 };
 const labelStyle = { fontSize: 12, fontWeight: "600" as const, marginBottom: 4, color: "#374151" };
@@ -70,7 +70,7 @@ export default function DevAuthTest() {
             color="#22c55e"
             onPress={async () => {
               try {
-                await finishFirstSignIn({ identifier: username, session, code, displayName, preferredLang: preferredLang as Language });
+                await finishFirstSignIn({ identifier: username, session, code, displayName, preferredLang: preferredLang as LanguageCode });
                 setOut("User signed in and created");
               } catch (e: any) {
                 setOut(String(e.message ?? e));
