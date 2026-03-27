@@ -7,9 +7,20 @@ export const usernameSchema = z
     .max(15)
     .regex(/^[A-Za-z0-9_]+$/);
 
-export const newUserDetailsSchema = z.object({
+export const newUserDetailsBodySchema = z.object({
     displayName: z.string().min(1).max(255),
     preferredLang: z.nativeEnum(LanguageCode),
 });
 
-export type NewUserDetails = z.infer<typeof newUserDetailsSchema>;
+export const searchUsersQuerySchema = z.object({
+    q: z.string().min(1).max(255),
+    limit: z
+        .coerce.number()
+        .min(1)
+        .max(100)
+        .optional()
+        .default(10),
+});
+
+export type NewUserDetailsBody = z.infer<typeof newUserDetailsBodySchema>;
+export type SearchUsersQuery = z.infer<typeof searchUsersQuerySchema>;

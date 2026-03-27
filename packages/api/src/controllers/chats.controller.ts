@@ -1,16 +1,11 @@
 import { Request, Response } from "express";
+import { CreateChatAndSendFirstMessageBody } from "@app/shared-types/schemas";
 import * as chatsService from "../services/chats.service";
 import * as messagesService from "../services/messages.service";
-import { CreateMessageBody } from "./messages.controller";
-
-export type CreateChatAndSendFirstMessageBody = {
-    userIds: string[]; // not including the current user
-    content: CreateMessageBody["content"];
-};
 
 export async function findOrCreateChatAndSendFirstMessage(req: Request, res: Response) {
     try {
-        const body = req.body as CreateChatAndSendFirstMessageBody;
+        const body = req.validated?.body as CreateChatAndSendFirstMessageBody;
 
         const chat = await chatsService.findOrCreateChat({ userIds: [req.auth!.sub, ...body.userIds] });
 

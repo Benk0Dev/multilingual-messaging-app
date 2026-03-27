@@ -52,7 +52,9 @@ export default function AppLayout() {
                 appendMessage(event.message.chat.id, event.message);
 
                 if (event.message.sender.id !== myUserId) {
-                    markMessagesAsDelivered([event.message.id]);
+                    markMessagesAsDelivered({
+                        messageIds: [event.message.id],
+                    });
                 }
             }
 

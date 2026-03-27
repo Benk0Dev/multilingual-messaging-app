@@ -138,7 +138,10 @@ export default function ChatsScreen() {
         setSearchLoading(true);
         setSearchError(null);
         try {
-          const res = await searchUsers(q);
+          const res = await searchUsers({
+            query: q,
+            limit: 10,
+          });
           if (!cancelled) {
             setSearchResults(res.users);
           }

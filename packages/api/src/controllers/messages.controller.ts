@@ -1,21 +1,11 @@
 import { Request, Response } from "express";
+import { CreateMessageBody, GetMessagesQuery, UpdateMessageReceiptBody, Uuid } from "@app/shared-types/schemas";
 import * as messagesService from "../services/messages.service";
-
-export type CreateMessageBody = {
-    content: {
-        text: string;
-    };
-};
 
 export async function createMessageForChat(req: Request, res: Response) {
     try {
-        const { chatId } = req.params;
-
-        if (!chatId || Array.isArray(chatId)) {
-            return res.status(400).json({ error: "chatId required" });
-        }
-
-        const body = req.body as CreateMessageBody;
+        const { chatId } = req.validated?.params as { chatId: Uuid };
+        const body = req.validated?.body as CreateMessageBody;
 
         const message = await messagesService.createMessageForChat({
             chatId,
@@ -49,18 +39,16 @@ export async function createMessageForChat(req: Request, res: Response) {
 
 export async function getMessagesForChat(req: Request, res: Response) {
     try {
-        const { chatId } = req.params;
-
-        if (!chatId || Array.isArray(chatId)) {
-            return res.status(400).json({ error: "chatId required" });
-        }
-
-        const messages = await messagesService.getMessagesForChat({
+        const { chatId } = req.validated?.params as { chatId: Uuid };
+        const { limit } = req.validated?.query as unknown as GetMessagesQuery;
+        
+        const { messages } = await messagesService.getMessagesForChat({
             userId: req.auth!.sub,
             chatId,
+            limit,
         });
 
-        return res.json(messages);
+        return res.status(200).json({ messages });
     } catch (err: any) {
         console.error(err);
 
@@ -76,26 +64,21 @@ export async function getMessagesForChat(req: Request, res: Response) {
     }
 }
 
-type UpdateMessageReceiptBody = {
-    messageIds: string[];
-};
-
-export async function markMessagesAsDeliveredOrRead(req: Request, res: Response, type: "delivered" | "read") {
+export async function markMessagesAsDeliveredOrRead(
+    req: Request,
+    res: Response,
+    type: "delivered" | "read",
+) {
     try {
-        const body = req.body as UpdateMessageReceiptBody;
-        const messageIds = Array.isArray(body.messageIds) ? body.messageIds : [body.messageIds];
-
-        if (messageIds.length === 0) {
-            return res.status(400).json({ error: "messageIds required" });
-        }
+        const body = req.validated?.body as UpdateMessageReceiptBody;
 
         await messagesService.markMessagesAsDeliveredOrRead({
             recipientId: req.auth!.sub,
-            messageIds,
+            messageIds: body.messageIds,
             type,
         });
 
-        return res.json({ success: true });
+        return res.status(200).json({ success: true });
     } catch (err: any) {
         console.error(err);
         return res.status(500).json({ error: "Internal server error" });

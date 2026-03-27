@@ -183,7 +183,11 @@ export async function createMessageForChat(input: {
     return result.message;
 }
 
-export async function getMessagesForChat(input: { userId: string, chatId: string }): Promise<{ messages: Message[] }> {
+export async function getMessagesForChat(input: {
+    userId: string,
+    chatId: string,
+    limit: number,
+}): Promise<{ messages: Message[] }> {
     const user = await prisma.user.findUnique({
         where: { id: input.userId },
         select: { preferredLang: true },
@@ -255,6 +259,7 @@ export async function getMessagesForChat(input: { userId: string, chatId: string
                 },
             },
         },
+        take: input.limit,
     });
 
     return {

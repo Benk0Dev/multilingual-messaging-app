@@ -5,7 +5,7 @@ import {
     verifyEmailOtp,
 } from "./cognito";
 import { clearSession } from "./session";
-import { usernameSchema, newUserDetailsSchema } from "@app/shared-types/schemas";
+import { usernameSchema, newUserDetailsBodySchema } from "@app/shared-types/schemas";
 import { LanguageCode } from "@app/shared-types/enums";
 import { useChatStore } from "../store/chatStore";
 
@@ -74,7 +74,7 @@ export async function finishFirstSignIn(params: {
     preferredLang: LanguageCode;
 }) {
     try {
-        const validatedNewUserDetails = newUserDetailsSchema.safeParse({
+        const validatedNewUserDetails = newUserDetailsBodySchema.safeParse({
             displayName: params.displayName,
             preferredLang: params.preferredLang,
         });
@@ -84,7 +84,10 @@ export async function finishFirstSignIn(params: {
         }
 
         await verifyEmailOtp(params.identifier, params.session, params.code);
-        const user = await createUser(validatedNewUserDetails.data.displayName, validatedNewUserDetails.data.preferredLang);
+        const user = await createUser({
+            displayName: validatedNewUserDetails.data.displayName,
+            preferredLang: validatedNewUserDetails.data.preferredLang,
+        });
         return user;
     } catch (e: any) {
         throw new Error("Failed to finish first sign in");

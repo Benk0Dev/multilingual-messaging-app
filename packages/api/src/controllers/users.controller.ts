@@ -1,27 +1,19 @@
 import { Request, Response } from "express";
 import * as usersService from "../services/users.service";
-import { NewUserDetails, newUserDetailsSchema } from "@app/shared-types/schemas";
+import { NewUserDetailsBody, SearchUsersQuery } from "@app/shared-types/schemas";
 
 export async function createUser(req: Request, res: Response) {
     try {
-        const body = req.body as NewUserDetails;
-
-        const validatedBody = newUserDetailsSchema.safeParse(body);
-
-        if (!validatedBody.success || !validatedBody.data) {
-            return res.status(400).json({ error: "Invalid request body" });
-        }
+        const body = req.validated?.body as NewUserDetailsBody;
 
         const user = await usersService.createUser({ 
             id: req.auth!.sub,
             username: req.auth!.username!,
-            displayName: validatedBody.data.displayName,
-            preferredLang: validatedBody.data.preferredLang,
+            displayName: body.displayName,
+            preferredLang: body.preferredLang,
         });
 
-        return res.status(201).json({
-            user: user,
-        });
+        return res.status(201).json({ user });
     } catch (err: any) {
         if (err.message === "already_exists") {
             return res.status(400).json({ error: "User already exists" });
@@ -37,9 +29,7 @@ export async function getMe(req: Request, res: Response) {
 
         const user = await usersService.getUser({ id: auth.sub });
 
-        return res.status(200).json({
-            user: user,
-        });
+        return res.status(200).json({ user });
     } catch (err: any) {
         console.error(err);
         if (err.message === "not_found") {
@@ -52,13 +42,13 @@ export async function getMe(req: Request, res: Response) {
 
 export async function searchUsers(req: Request, res: Response) {
     try {
-        const query = req.query.q?.toString() ?? "";
+        const { q, limit } = req.validated?.query as unknown as SearchUsersQuery;
 
-        if (!query) {
-            return res.status(200).json({ users: [] });
-        }
-
-        const users = await usersService.searchUsers({ currentUserId: req.auth!.sub, query });
+        const users = await usersService.searchUsers({
+            currentUserId: req.auth!.sub,
+            query: q,
+            limit,
+        });
 
         return res.status(200).json({ users: users });
     } catch (err: any) {

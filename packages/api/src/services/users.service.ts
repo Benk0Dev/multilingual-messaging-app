@@ -63,6 +63,7 @@ export async function getUser(input: {
 export async function searchUsers(input: {
     currentUserId: string;
     query: string;
+    limit: number;
 }): Promise<SearchUsersResult[]> {
     const trimmedQuery = input.query.trim();
 
@@ -190,7 +191,7 @@ export async function searchUsers(input: {
             displayName: true,
             pictureUrl: true,
         },
-        take: 10,
+        take: input.limit,
     });
 
     return [

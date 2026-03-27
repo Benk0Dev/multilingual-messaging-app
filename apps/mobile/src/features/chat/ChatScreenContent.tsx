@@ -134,7 +134,10 @@ export default function ChatScreenContent(props: Props) {
             if (!activeChatId || isLoaded) return;
 
             try {
-                const items = await getMessagesForChat(activeChatId);
+                const items = await getMessagesForChat({ 
+                    chatId: activeChatId, 
+                    limit: 30,
+                });
                 setMessagesForChat(activeChatId, items);
             } catch (e) {
                 console.error(e);
@@ -181,7 +184,7 @@ export default function ChatScreenContent(props: Props) {
             try {
                 candidatesNotInFlight.forEach((id) => inFlightReadMessageIdsRef.current.add(id));
 
-                await markMessagesAsRead(candidatesNotInFlight);
+                await markMessagesAsRead({ messageIds: candidatesNotInFlight });
                 if (cancelled) return;
                 const readAt = new Date().toISOString();
                 candidatesNotInFlight.forEach((id) => {
@@ -224,7 +227,12 @@ export default function ChatScreenContent(props: Props) {
         try {
             // Existing chat
             if (isLiveChat) {
-                const message = await createMessageForChat(activeChatId!, trimmed);
+                const message = await createMessageForChat({ 
+                    chatId: activeChatId!, 
+                    content: { 
+                        text: trimmed,
+                    },
+                });
                 appendMessage(activeChatId!, message);
                 setPendingOutgoingText(null);
                 return;
