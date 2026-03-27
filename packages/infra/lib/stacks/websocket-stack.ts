@@ -9,7 +9,6 @@ import * as path from "path";
 
 type WebSocketStackProps = cdk.NestedStackProps & {
     cognito: {
-        region: string;
         userPoolId: string;
         clientId: string;
     };
@@ -51,7 +50,6 @@ export class WebSocketStack extends cdk.NestedStack {
             handler: "handler",
             environment: {
                 CONNECTIONS_TABLE: this.connectionsTable.tableName,
-                COGNITO_REGION: props.cognito.region,
                 COGNITO_USER_POOL_ID: props.cognito.userPoolId,
                 COGNITO_USER_POOL_CLIENT_ID: props.cognito.clientId,
             },

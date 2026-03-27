@@ -1,11 +1,10 @@
 import type { APIGatewayEventWebsocketRequestContextV2, APIGatewayProxyEventV2WithRequestContext } from "aws-lambda";
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { CognitoJwtVerifier } from "aws-jwt-verify";
 
 type WebSocketConnectEvent = APIGatewayProxyEventV2WithRequestContext<APIGatewayEventWebsocketRequestContextV2>;
 
 const tableName = process.env.CONNECTIONS_TABLE;
-const region = process.env.COGNITO_REGION;
 const userPoolId = process.env.COGNITO_USER_POOL_ID;
 const clientId = process.env.COGNITO_USER_POOL_CLIENT_ID;
 
@@ -13,12 +12,15 @@ if (!tableName) {
     throw new Error("Missing CONNECTIONS_TABLE environment variable.");
 }
 
-if (!region || !userPoolId || !clientId) {
+if (!userPoolId || !clientId) {
     throw new Error("Missing Cognito environment variables.");
 }
 
-const issuer = `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`;
-const jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
+const verifier = CognitoJwtVerifier.create({
+    userPoolId,
+    tokenUse: "access",
+    clientId,
+});
 
 const ddb = new DynamoDBClient({});
 
@@ -41,21 +43,7 @@ export const handler = async (event: WebSocketConnectEvent) => {
             };
         }
 
-        const { payload } = await jwtVerify(token, jwks, { issuer });
-
-        if (payload.token_use !== "access") {
-            return {
-                statusCode: 401,
-                body: "Wrong token type",
-            };
-        }
-
-        if (payload.client_id !== clientId) {
-            return {
-                statusCode: 401,
-                body: "Wrong client",
-            };
-        }
+        const payload = await verifier.verify(token);
 
         const userId = payload.sub;
 

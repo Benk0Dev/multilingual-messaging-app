@@ -21,6 +21,7 @@
   "dependencies": {
     "@app/shared-types": "*",
     "@aws-sdk/client-dynamodb": "^3.1014.0",
+    "aws-jwt-verify": "^5.1.1",
     "aws-lambda": "^1.0.7"
   },
   "files": [

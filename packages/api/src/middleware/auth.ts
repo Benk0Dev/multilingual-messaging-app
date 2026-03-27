@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { CognitoJwtVerifier } from "aws-jwt-verify";
 import { requiredEnv } from "../utils/requiredEnv";
 
 declare global {
@@ -8,18 +8,19 @@ declare global {
             auth?: {
                 sub: string;
                 username?: string;
-                email?: string;
             };
         }
     }
 }
 
-const region = requiredEnv("AWS_REGION");
 const userPoolId = requiredEnv("COGNITO_USER_POOL_ID");
 const clientId = requiredEnv("COGNITO_USER_POOL_CLIENT_ID");
 
-const issuer = `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`;
-const jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
+const verifier = CognitoJwtVerifier.create({
+    userPoolId,
+    tokenUse: "access",
+    clientId,
+});
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
     try {
@@ -29,16 +30,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         }
 
         const token = header.slice("Bearer ".length);
-
-        const { payload } = await jwtVerify(token, jwks, { issuer });
-
-        if (payload.token_use !== "access") {
-            return res.status(401).json({ error: "Wrong token type" });
-        }
-
-        if (payload.client_id !== clientId) {
-            return res.status(401).json({ error: "Wrong client" });
-        }
+        const payload = await verifier.verify(token);
 
         const sub = payload.sub;
         if (typeof sub !== "string") {

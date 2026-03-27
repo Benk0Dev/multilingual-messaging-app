@@ -26,7 +26,6 @@ export class InfraStack extends cdk.Stack {
         this.auth = new AuthStack(this, "Auth");
         this.ws = new WebSocketStack(this, "WebSocket", {
             cognito: {
-                region: this.region,
                 userPoolId: this.auth.userPool.userPoolId,
                 clientId: this.auth.userPoolClient.userPoolClientId,
             },
