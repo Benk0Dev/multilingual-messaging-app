@@ -18,7 +18,6 @@ export function validate(
     path: "body" | "params" | "query",
 ) {
     return (req: Request, res: Response, next: NextFunction) => {
-        console.log(path, req[path], schema.toString());
         const result = schema.safeParse(req[path]);
 
         if (!result.success) {

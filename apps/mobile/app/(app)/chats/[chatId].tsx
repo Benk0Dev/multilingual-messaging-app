@@ -1,17 +1,37 @@
-import { Stack, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import ChatScreenContent from "@/src/features/chat/ChatScreenContent";
 
 export default function ExistingChatRoute() {
-    const { chatId, title } = useLocalSearchParams<{ chatId: string, title: string }>();
+    const params = useLocalSearchParams<{
+        chatId: string;
+        peerId: string;
+        peerUsername: string;
+        peerDisplayName: string;
+        peerPictureUrl?: string;
+        peerPreferredLang: string;
+    }>();
+
+    const { chatId, peerId, peerUsername, peerDisplayName, peerPictureUrl, peerPreferredLang } = params;
+
+    if (!chatId || !peerId || !peerUsername || !peerDisplayName || !peerPreferredLang) {
+        return null;
+    }
 
     if (!chatId) {
         return null;
     }
 
     return (
-        <>
-            <Stack.Screen options={{ title: title ?? "Chat" }} />
-            <ChatScreenContent mode="existing" chatId={chatId} />
-        </>
+        <ChatScreenContent
+            mode="existing"
+            chatId={chatId}
+            peer={{
+                id: peerId,
+                username: peerUsername,
+                displayName: peerDisplayName,
+                pictureUrl: peerPictureUrl ?? null,
+                preferredLang: peerPreferredLang,
+            }}
+        />
     );
 }

@@ -1,12 +1,8 @@
-import type { LastMessage, UserLite } from "./index.ts";
+import type { LastMessage, User } from "./index.ts";
 
 export type Chat = {
     id: string;
     createdAt: string;
-    members: UserLite[];
+    members: User[];
     lastMessage?: LastMessage;
-};
-
-export type ChatLite = {
-    id: string;
 };

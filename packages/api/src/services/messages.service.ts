@@ -102,6 +102,8 @@ export async function createMessageForChat(input: {
                         id: true,
                         username: true,
                         displayName: true,
+                        preferredLang: true,
+                        createdAt: true,
                     },
                 },
                 content: {
@@ -138,12 +140,11 @@ export async function createMessageForChat(input: {
             message: {
                 ...message,
                 id: message.id.toString(),
-                chat: {
-                    id: message.chat.id.toString(),
-                },
+                chatId: message.chat.id.toString(),
                 sender: {
                     ...message.sender,
                     id: message.sender.id.toString(),
+                    createdAt: message.sender.createdAt.toISOString(),
                 },
                 content: {
                     ...message.content,
@@ -225,6 +226,8 @@ export async function getMessagesForChat(input: {
                     id: true,
                     username: true,
                     displayName: true,
+                    preferredLang: true,
+                    createdAt: true,
                 },
             },
             content: {
@@ -266,12 +269,11 @@ export async function getMessagesForChat(input: {
         messages: messages.map((message) => ({
             ...message,
             id: message.id.toString(),
-            chat: {
-                id: message.chat.id.toString(),
-            },
+            chatId: message.chat.id.toString(),
             sender: {
                 ...message.sender,
                 id: message.sender.id.toString(),
+                createdAt: message.sender.createdAt.toISOString(),
             },
             content: {
                 ...message.content,

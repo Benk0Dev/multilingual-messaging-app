@@ -1,15 +1,17 @@
 import { Stack } from "expo-router";
 import { useTheme } from "@/src/theme";
 
-export default function AuthLayout() {
+export default function ChatsLayout() {
     const { colors } = useTheme();
 
     return (
         <Stack
             screenOptions={{
-                headerShown: true, // TODO: false
+                headerShown: false,
                 contentStyle: { backgroundColor: colors.bg },
             }}
-        />
+        >
+            <Stack.Screen name="index" options={{ title: "Chats" }} />
+        </Stack>
     );
 }

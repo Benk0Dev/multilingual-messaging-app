@@ -1,48 +1,39 @@
-import { Stack, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import ChatScreenContent from "@/src/features/chat/ChatScreenContent";
 import { createChatAndSendFirstMessage } from "@/src/api/chats";
 
 export default function NewChatRoute() {
     const params = useLocalSearchParams<{
-        userId: string;
-        username: string;
-        displayName: string;
-        pictureUrl?: string;
+        peerId: string;
+        peerUsername: string;
+        peerDisplayName: string;
+        peerPictureUrl?: string;
+        peerPreferredLang: string;
     }>();
 
-    const userId = params.userId;
-    const username = params.username;
-    const displayName = params.displayName;
-    const pictureUrl = params.pictureUrl;
+    const { peerId, peerUsername, peerDisplayName, peerPictureUrl, peerPreferredLang } = params;
 
-    if (!userId || !username || !displayName) {
+    if (!peerId || !peerUsername || !peerDisplayName || !peerPreferredLang) {
         return null;
     }
 
     return (
-        <>
-            <Stack.Screen options={{ title: displayName }} />
-            <ChatScreenContent
-                mode="draft"
-                draftUser={{
-                    id: userId,
-                    username,
-                    displayName,
-                    pictureUrl: pictureUrl ?? null,
-                }}
-                onSendFirstMessage={async (input: {
-                    userId: string;
-                    text: string;
-                }) => {
-                    const data = await createChatAndSendFirstMessage({
-                        userIds: [input.userId],
-                        content: {
-                            text: input.text,
-                        },
-                    });
-                    return data;
-                }}
-            />
-        </>
+        <ChatScreenContent
+            mode="draft"
+            peer={{
+                id: peerId,
+                username: peerUsername,
+                displayName: peerDisplayName,
+                pictureUrl: peerPictureUrl ?? null,
+                preferredLang: peerPreferredLang,
+            }}
+            onSendFirstMessage={async (input) => {
+                const data = await createChatAndSendFirstMessage({
+                    userIds: [input.userId],
+                    content: { text: input.text },
+                });
+                return data;
+            }}
+        />
     );
 }

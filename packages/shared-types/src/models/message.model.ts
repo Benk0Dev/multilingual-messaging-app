@@ -1,9 +1,9 @@
-import type { UserLite, ChatLite, MessageContent, MessageReceipt } from "./index.ts";
+import type { User, MessageContent, MessageReceipt } from "./index.ts";
 
 export type Message = {
     id: string;
-    chat: ChatLite;
-    sender: UserLite;
+    chatId: string;
+    sender: User;
     content: MessageContent;
     receipts?: MessageReceipt[];
     isDeleted: boolean;
@@ -14,7 +14,7 @@ export type Message = {
 export type LastMessage = {
     id: string;
     content: MessageContent;
-    sender: UserLite;
+    sender: User;
     isDeleted: boolean;
     createdAt: string;
     updatedAt: string;

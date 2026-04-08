@@ -105,6 +105,7 @@ export async function searchUsers(input: {
             chat: {
                 select: {
                     id: true,
+                    createdAt: true,
                     members: {
                         where: {
                             userId: {
@@ -134,6 +135,43 @@ export async function searchUsers(input: {
                                     username: true,
                                     displayName: true,
                                     pictureUrl: true,
+                                    preferredLang: true,
+                                    createdAt: true,
+                                },
+                            },
+                        },
+                    },
+                    messages: {
+                        orderBy: {
+                            createdAt: "desc",
+                        },
+                        take: 1,
+                        select: {
+                            id: true,
+                            isDeleted: true,
+                            createdAt: true,
+                            updatedAt: true,
+                            content: {
+                                select: {
+                                    id: true,
+                                    text: true,
+                                    originalLang: true,
+                                    translations: {
+                                        select: {
+                                            targetLang: true,
+                                            translatedText: true,
+                                        },
+                                    },
+                                },
+                            },
+                            sender: {
+                                select: {
+                                    id: true,
+                                    username: true,
+                                    displayName: true,
+                                    pictureUrl: true,
+                                    preferredLang: true,
+                                    createdAt: true,
                                 },
                             },
                         },
@@ -151,11 +189,36 @@ export async function searchUsers(input: {
 
             if (!existingUsersMap.has(user.id)) {
                 existingUsersMap.set(user.id, {
-                    id: user.id,
-                    username: user.username,
-                    displayName: user.displayName,
-                    pictureUrl: user.pictureUrl,
-                    chatId: match.chat.id,
+                    user: {
+                        ...user,
+                        id: user.id.toString(),
+                        createdAt: user.createdAt.toISOString(),
+                    },
+                    chat: {
+                        ...match.chat,
+                        id: match.chat.id.toString(),
+                        createdAt: match.chat.createdAt.toISOString(),
+                        members: match.chat.members.map((member) => ({
+                            ...member.user,
+                            id: member.user.id.toString(),
+                            createdAt: member.user.createdAt.toISOString(),
+                        })),
+                        lastMessage: match.chat.messages[0] ? {
+                            ...match.chat.messages[0],
+                            id: match.chat.messages[0].id.toString(),
+                            content: {
+                                ...match.chat.messages[0].content,
+                                id: match.chat.messages[0].content.id.toString(),
+                            },
+                            sender: {
+                                ...match.chat.messages[0].sender,
+                                id: match.chat.messages[0].sender.id.toString(),
+                                createdAt: match.chat.messages[0].sender.createdAt.toISOString(),
+                            },
+                            createdAt: match.chat.messages[0].createdAt.toISOString(),
+                            updatedAt: match.chat.messages[0].updatedAt.toISOString(),
+                        } : undefined,
+                    },
                 });
             }
         }
@@ -190,17 +253,17 @@ export async function searchUsers(input: {
             username: true,
             displayName: true,
             pictureUrl: true,
+            preferredLang: true,
+            createdAt: true,
         },
-        take: input.limit,
+        take: input.limit - existingUserIds.length,
     });
 
-    return [
-        ...existingUsersMap.values(),
-        ...globalMatches.map((match) => ({
-            id: match.id,
-            username: match.username,
-            displayName: match.displayName,
-            pictureUrl: match.pictureUrl,
-        })),
-    ];
+    return [...existingUsersMap.values(), ...globalMatches.map((match) => ({
+        user: {
+            ...match,
+            id: match.id.toString(),
+            createdAt: match.createdAt.toISOString(),
+        },
+    }))];
 }

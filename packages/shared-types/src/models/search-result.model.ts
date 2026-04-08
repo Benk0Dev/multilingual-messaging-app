@@ -1,7 +1,6 @@
+import type { User, Chat } from "./index.ts";
+
 export type SearchUsersResult = {
-    id: string;
-    username: string;
-    displayName: string;
-    pictureUrl: string | null;
-    chatId?: string;
+    user: User;
+    chat?: Chat;
 }

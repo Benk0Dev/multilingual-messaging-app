@@ -40,6 +40,8 @@ export async function findOrCreateChat(input: { userIds: string[] }): Promise<Ch
                             username: true,
                             displayName: true,
                             pictureUrl: true,
+                            preferredLang: true,
+                            createdAt: true,
                         },
                     },
                 },
@@ -55,6 +57,7 @@ export async function findOrCreateChat(input: { userIds: string[] }): Promise<Ch
             members: chat.members.map((member) => ({
                 ...member.user,
                 id: member.user.id.toString(),
+                createdAt: member.user.createdAt.toISOString(),
             })),
         };
     }
@@ -70,6 +73,8 @@ export async function findOrCreateChat(input: { userIds: string[] }): Promise<Ch
             username: true,
             displayName: true,
             pictureUrl: true,
+            preferredLang: true,
+            createdAt: true,
         },
     });
 
@@ -102,6 +107,7 @@ export async function findOrCreateChat(input: { userIds: string[] }): Promise<Ch
             members: validUsers.map((user) => ({
                 ...user,
                 id: user.id.toString(),
+                createdAt: user.createdAt.toISOString(),
             })),
         };
     });
@@ -150,6 +156,8 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
                             username: true,
                             displayName: true,
                             pictureUrl: true,
+                            preferredLang: true,
+                            createdAt: true,
                         },
                     },
                 },
@@ -181,6 +189,8 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
                             username: true,
                             displayName: true,
                             pictureUrl: true,
+                            preferredLang: true,
+                            createdAt: true,
                         },
                     },
                     isDeleted: true,
@@ -220,6 +230,7 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
             sender: {
                 ...chat.messages[0].sender,
                 id: chat.messages[0].sender.id.toString(),
+                createdAt: chat.messages[0].sender.createdAt.toISOString(),
             },
             createdAt: chat.messages[0].createdAt.toISOString(),
             updatedAt: chat.messages[0].updatedAt.toISOString(),
@@ -227,6 +238,7 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
         members: chat.members.filter((member) => member.user.id !== userId).map((member) => ({
             ...member.user,
             id: member.user.id.toString(),
+            createdAt: member.user.createdAt.toISOString(),
         })),
     })).sort((a, b) => new Date(b.lastMessage?.createdAt || 0).getTime() - new Date(a.lastMessage?.createdAt || 0).getTime());
 }
