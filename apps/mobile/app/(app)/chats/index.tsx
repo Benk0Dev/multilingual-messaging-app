@@ -20,6 +20,7 @@ import { BottomTabBar } from "@/src/components/navigation/BottomTabBar";
 import { SearchOverlay } from "@/src/components/chat/SearchOverlay";
 import { SimpleScreenHeader as ScreenHeader } from "@/src/components/ui/SimpleScreenHeader";
 import { countUnread } from "@/src/utils/messages";
+import { useNavigationGuard } from "@/src/hooks/useNavigationGuard";
 
 function getPeer(chat: Chat, myUserId: string | null) {
     if (!myUserId) return chat.members[0] ?? null;
@@ -28,6 +29,8 @@ function getPeer(chat: Chat, myUserId: string | null) {
 
 export default function ChatsScreen() {
     const { colors, spacing, radii, avatarSizes } = useTheme();
+
+    const guard = useNavigationGuard();
 
     const chats = useChatStore((s) => s.chats);
     const setChats = useChatStore((s) => s.setChats);
@@ -82,7 +85,7 @@ export default function ChatsScreen() {
         peerPictureUrl?: string;
         peerPreferredLang: string;
     }) {
-        router.push({
+        guard(() => router.push({
             pathname: "/chats/[chatId]",
             params: {
                 chatId: params.chatId,
@@ -92,7 +95,7 @@ export default function ChatsScreen() {
                 peerPictureUrl: params.peerPictureUrl,
                 peerPreferredLang: params.peerPreferredLang,
             },
-        });
+        }));
     }
 
     function handleNavigateToNewChat(params: {
@@ -102,7 +105,7 @@ export default function ChatsScreen() {
         peerPictureUrl?: string;
         peerPreferredLang: string;
     }) {
-        router.push({
+        guard(() => router.push({
             pathname: "/chats/new",
             params: {
                 peerId: params.peerId,
@@ -111,7 +114,7 @@ export default function ChatsScreen() {
                 peerPictureUrl: params.peerPictureUrl,
                 peerPreferredLang: params.peerPreferredLang,
             },
-        });
+        }));
     }
 
     return (
@@ -205,7 +208,7 @@ export default function ChatsScreen() {
                             time={lastTime}
                             unreadCount={unread}
                             onPress={() =>
-                                router.push({
+                                guard(() => router.push({
                                     pathname: "/chats/[chatId]",
                                     params: {
                                         chatId: item.id,
@@ -215,7 +218,7 @@ export default function ChatsScreen() {
                                         peerPictureUrl: peer?.pictureUrl ?? undefined,
                                         peerPreferredLang: peer?.preferredLang ?? "",
                                     },
-                                })
+                                }))
                             }
                         />
                     );
