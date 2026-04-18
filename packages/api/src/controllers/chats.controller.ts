@@ -7,17 +7,20 @@ export async function findOrCreateChatAndSendFirstMessage(req: Request, res: Res
     try {
         const body = req.validated?.body as CreateChatAndSendFirstMessageBody;
 
-        const chat = await chatsService.findOrCreateChat({ userIds: [req.auth!.sub, ...body.userIds] });
+        const chat = await chatsService.findOrCreateChat({
+            userIds: [req.auth!.sub, ...body.userIds]
+        });
 
         const message = await messagesService.createMessageForChat({
             chatId: chat.id,
             senderId: req.auth!.sub,
             content: body.content,
+            clientId: body.clientId,
         });
 
         return res.status(201).json({
             chat,
-            message,
+            message: {...message, clientId: body.clientId },
         });
     } catch (err: any) {
         console.error(err);

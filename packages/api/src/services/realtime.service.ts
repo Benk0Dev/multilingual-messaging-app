@@ -79,3 +79,8 @@ export async function sendToUser(userId: string, payload: unknown): Promise<void
         connectionIds.map((connectionId) => sendToConnection(connectionId, payload))
     );
 }
+
+export async function sendToUsers(userIds: string[], payload: unknown): Promise<void> {
+    const unique = Array.from(new Set(userIds));
+    await Promise.all(unique.map((userId) => sendToUser(userId, payload)));
+}

@@ -1,10 +1,14 @@
 import { Router } from "express";
 import { validate } from "../middleware/validate";
 import { updateMessageReceiptBodySchema } from "@app/shared-types/schemas";
-import { markMessagesAsDelivered, markMessagesAsRead } from "../controllers/messages.controller";
+import { markMessagesAsDelivered, markMessagesAsRead, markAllMessagesAsDelivered } from "../controllers/messages.controller";
 
 const router = Router();
 
+router.post(
+    "/delivered/all",
+    markAllMessagesAsDelivered,
+);
 router.post(
     "/delivered",
     validate(updateMessageReceiptBodySchema, "body"),

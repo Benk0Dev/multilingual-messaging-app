@@ -1,6 +1,6 @@
 import { prisma } from "@app/db";
 import { Chat } from "@app/shared-types/models";
-import { sendToUser } from "./realtime.service";
+import { sendToUsers } from "./realtime.service";
 
 export async function findOrCreateChat(input: { userIds: string[] }): Promise<Chat> {
     // remove duplicates
@@ -82,8 +82,6 @@ export async function findOrCreateChat(input: { userIds: string[] }): Promise<Ch
         throw new Error("invalid_user_ids");
     }
 
-    const otherUserIds = validUsers.filter((user) => user.id !== input.userIds[0]).map((user) => user.id);
-
     const result = await prisma.$transaction(async (tx) => {
         const chat = await tx.chat.create({
             data: {},
@@ -113,14 +111,12 @@ export async function findOrCreateChat(input: { userIds: string[] }): Promise<Ch
     });
 
     try {
-        await Promise.all(otherUserIds.map((otherUserId) => {
-            const payload = {
-                type: "chat.created",
-                chat: result,
-            };
-
-            return sendToUser(otherUserId, payload);
-        }));
+        const allMemberIds = validUsers.map((u) => u.id);
+        const payload = {
+            type: "chat.created",
+            chat: result,
+        };
+        await sendToUsers(allMemberIds, payload);
     } catch (error) {
         console.error("WebSocket fanout failed", error);
     }

@@ -54,21 +54,23 @@ export default function AppLayout() {
             if (event.type === "message.created") {
                 appendMessage(event.message.chatId, event.message);
 
-                const knownChatIds = new Set(
-                    useChatStore.getState().chats.map((c) => c.id)
-                );
-                if (!knownChatIds.has(event.message.chatId)) {
-                    (async () => {
-                        try {
-                            const refreshed = await getChats();
-                            setChats(refreshed);
-                        } catch (e) {
-                            console.warn("Failed to refresh chats after unknown-chat message", e);
-                        }
-                    })();
-                }
+                const isOwnMessage = me && event.message.sender.id === me.id;
 
-                if (me && event.message.sender.id !== me.id) {
+                if (!isOwnMessage) {
+                    const knownChatIds = new Set(
+                        useChatStore.getState().chats.map((c) => c.id)
+                    );
+                    if (!knownChatIds.has(event.message.chatId)) {
+                        (async () => {
+                            try {
+                                const refreshed = await getChats();
+                                setChats(refreshed);
+                            } catch (e) {
+                                console.warn("Failed to refresh chats after unknown-chat message", e);
+                            }
+                        })();
+                    }
+
                     markMessagesAsDelivered({
                         messageIds: [event.message.id],
                     });

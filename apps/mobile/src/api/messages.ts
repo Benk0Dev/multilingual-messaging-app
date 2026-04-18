@@ -46,6 +46,12 @@ export async function markMessagesAsDelivered(params: {
     });
 }
 
+export async function markAllMessagesAsDelivered() {
+    await api(`/api/messages/delivered/all`, {
+        method: "POST",
+    });
+}
+
 export async function markMessagesAsRead(params: {
     messageIds: string[];
 }) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import { getChats } from "@/src/api/chats";
-import { getMessagesForChat } from "@/src/api/messages";
+import { getMessagesForChat, markAllMessagesAsDelivered } from "@/src/api/messages";
 import { useChatStore } from "@/src/store/chatStore";
 import type { Message } from "@app/shared-types/models";
 
@@ -27,6 +27,13 @@ export function useChatSync(trigger: boolean | number, enabled: boolean) {
         if (inFlightRef.current) return;
         inFlightRef.current = true;
         try {
+            // Mark all messages as delivered
+            try {
+                await markAllMessagesAsDelivered();
+            } catch (e) {
+                console.warn("useChatSync: failed to mark all messages as delivered", e);
+            }
+
             // Refresh chat list
             try {
                 const items = await getChats();

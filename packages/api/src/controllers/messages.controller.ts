@@ -13,6 +13,7 @@ export async function createMessageForChat(req: Request, res: Response) {
             content: {
                 text: body.content.text,
             },
+            clientId: body.clientId,
         });
 
         return res.status(201).json({
@@ -92,4 +93,16 @@ export async function markMessagesAsDelivered(req: Request, res: Response) {
 
 export async function markMessagesAsRead(req: Request, res: Response) {
     return await markMessagesAsDeliveredOrRead(req, res, "read");
+}
+
+export async function markAllMessagesAsDelivered(req: Request, res: Response) {
+    try {
+        await messagesService.markAllMessagesAsDelivered({
+            recipientId: req.auth!.sub,
+        });
+        return res.status(200).json({ success: true });
+    } catch (err: any) {
+        console.error(err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 }

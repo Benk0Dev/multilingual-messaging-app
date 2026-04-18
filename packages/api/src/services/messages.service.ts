@@ -9,6 +9,7 @@ export async function createMessageForChat(input: {
     content: { 
         text: string;
     };
+    clientId?: string;
 }): Promise<Message> {
     if (input.content.text.trim() === "") {
         throw new Error("content_empty");
@@ -158,9 +159,8 @@ export async function createMessageForChat(input: {
     });
 
     try {
-        await Promise.all(recipientIds.map((recipientId) => {
-            const translation = result.translations.find((translation) => translation.recipientId === recipientId);
-
+        const recipientSends = recipientIds.map((recipientId) => {
+            const translation = result.translations.find((t) => t.recipientId === recipientId);
             const payload = {
                 type: "message.created",
                 message: {
@@ -171,12 +171,21 @@ export async function createMessageForChat(input: {
                             targetLang: translation.targetLang,
                             translatedText: translation.translatedText,
                         } : undefined,
-                    }
+                    },
                 },
             };
-
             return sendToUser(recipientId, payload);
-        }));
+        });
+
+        const senderEcho = sendToUser(input.senderId, {
+            type: "message.created",
+            message: {
+                ...result.message,
+                clientId: input.clientId,
+            },
+        });
+
+        await Promise.all([...recipientSends, senderEcho]);
     } catch (error) {
         console.error("WebSocket fanout failed", error);
     }
@@ -346,32 +355,103 @@ export async function markMessagesAsDeliveredOrRead(input: {
         },
     });
 
+    await fanoutReceiptUpdates({
+        recipientId: input.recipientId,
+        receipts: pendingReceipts.map((r) => ({ messageId: r.message.id, senderId: r.message.senderId })),
+        type: input.type,
+        timestamp,
+    });
+}
+
+export async function markAllMessagesAsDelivered(input: {
+    recipientId: string,
+}): Promise<void> {
+    const pendingReceipts = await prisma.messageReceipt.findMany({
+        where: {
+            userId: input.recipientId,
+            deliveredAt: null,
+            message: {
+                senderId: {
+                    not: input.recipientId,
+                },
+            },
+        },
+        select: {
+            message: {
+                select: {
+                    id: true,
+                    senderId: true,
+                },
+            },
+        },
+    });
+
+    if (pendingReceipts.length === 0) {
+        return;
+    }
+
+    const timestamp = new Date();
+    const messageIds = pendingReceipts.map((r) => r.message.id);
+
+    await prisma.messageReceipt.updateMany({
+        where: {
+            messageId: { in: messageIds },
+            userId: input.recipientId,
+            deliveredAt: null,
+        },
+        data: {
+            deliveredAt: timestamp,
+        },
+    });
+
+    await fanoutReceiptUpdates({
+        recipientId: input.recipientId,
+        receipts: pendingReceipts.map((r) => ({ messageId: r.message.id, senderId: r.message.senderId })),
+        type: "delivered",
+        timestamp,
+    });
+}
+
+async function fanoutReceiptUpdates(input: {
+    recipientId: string;
+    receipts: { messageId: string; senderId: string }[];
+    type: "delivered" | "read";
+    timestamp: Date;
+}): Promise<void> {
     try {
         const updatesBySender = new Map<string, MessageReceiptUpdate[]>();
+        const updatesForSelf: MessageReceiptUpdate[] = [];
 
-        for (const receipt of pendingReceipts) {
-            const senderId = receipt.message.senderId;
-            if (senderId === input.recipientId) continue;
+        for (const receipt of input.receipts) {
+            if (receipt.senderId === input.recipientId) continue;
 
             const update: MessageReceiptUpdate = {
-                messageId: receipt.message.id,
+                messageId: receipt.messageId,
                 userId: input.recipientId,
-                [input.type === "delivered" ? "deliveredAt" : "readAt"]: timestamp.toISOString(),
+                [input.type === "delivered" ? "deliveredAt" : "readAt"]: input.timestamp.toISOString(),
             };
 
-            const list = updatesBySender.get(senderId) ?? [];
+            const list = updatesBySender.get(receipt.senderId) ?? [];
             list.push(update);
-            updatesBySender.set(senderId, list);
+            updatesBySender.set(receipt.senderId, list);
+            updatesForSelf.push(update);
         }
 
-        await Promise.all(
-            Array.from(updatesBySender.entries()).map(([senderId, updates]) =>
-                sendToUser(senderId, {
-                    type: "message.receipt.updated",
-                    data: updates,
-                }),
-            ),
+        const senderSends = Array.from(updatesBySender.entries()).map(([senderId, updates]) =>
+            sendToUser(senderId, {
+                type: "message.receipt.updated",
+                data: updates,
+            })
         );
+
+        const selfEcho = updatesForSelf.length > 0
+            ? sendToUser(input.recipientId, {
+                type: "message.receipt.updated",
+                data: updatesForSelf,
+              })
+            : Promise.resolve();
+
+        await Promise.all([...senderSends, selfEcho]);
     } catch (error) {
         console.error("WebSocket fanout failed", error);
     }
