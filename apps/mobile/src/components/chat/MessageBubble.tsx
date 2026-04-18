@@ -110,7 +110,7 @@ export function MessageBubble({
     const bubbleBg = sent ? colors.sentBubble : colors.receivedBubble;
     const bubbleBorder = sent ? undefined : colors.receivedBorder;
     const mainTextColor = sent ? colors.textOnPrimary : colors.textPrimary;
-    const subtextColor = sent ? colors.textOnPrimaryMuted : colors.textTertiary;
+    const subtextColor = sent ? colors.textOnPrimaryMuted : colors.textSecondary;
     const timeColor = sent ? colors.textOnPrimaryMuted : colors.textTertiary;
 
     const hasTranslation = Boolean(originalText) && showOriginal;
@@ -218,5 +218,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 3,
+        opacity: 0.5,
     },
 });
