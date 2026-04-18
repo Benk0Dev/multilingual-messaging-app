@@ -30,8 +30,6 @@ function getPeer(chat: Chat, myUserId: string | null) {
 export default function ChatsScreen() {
     const { colors, spacing, radii, avatarSizes } = useTheme();
 
-    const guard = useNavigationGuard();
-
     const chats = useChatStore((s) => s.chats);
     const setChats = useChatStore((s) => s.setChats);
     const messagesByChatId = useChatStore((s) => s.messagesByChatId);
@@ -43,6 +41,8 @@ export default function ChatsScreen() {
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchBarY, setSearchBarY] = useState(0);
     const searchBarRef = useRef<View>(null);
+
+    const guardNavigation = useNavigationGuard();
 
     const unreadByChatId = useMemo(() => {
         const map: Record<string, number> = {};
@@ -85,7 +85,7 @@ export default function ChatsScreen() {
         peerPictureUrl?: string;
         peerPreferredLang: string;
     }) {
-        guard(() => router.push({
+        guardNavigation(() => router.push({
             pathname: "/chats/[chatId]",
             params: {
                 chatId: params.chatId,
@@ -105,7 +105,7 @@ export default function ChatsScreen() {
         peerPictureUrl?: string;
         peerPreferredLang: string;
     }) {
-        guard(() => router.push({
+        guardNavigation(() => router.push({
             pathname: "/chats/new",
             params: {
                 peerId: params.peerId,
@@ -208,7 +208,7 @@ export default function ChatsScreen() {
                             time={lastTime}
                             unreadCount={unread}
                             onPress={() =>
-                                guard(() => router.push({
+                                guardNavigation(() => router.push({
                                     pathname: "/chats/[chatId]",
                                     params: {
                                         chatId: item.id,

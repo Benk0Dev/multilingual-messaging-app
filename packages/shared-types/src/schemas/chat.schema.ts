@@ -5,6 +5,7 @@ export const createChatAndSendFirstMessageBodySchema = z.object({
     content: z.object({
         text: z.string(),
     }),
+    clientId: z.string().optional(),
 });
 
 export type CreateChatAndSendFirstMessageBody = z.infer<typeof createChatAndSendFirstMessageBodySchema>;

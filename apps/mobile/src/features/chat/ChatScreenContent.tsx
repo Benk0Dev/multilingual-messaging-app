@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     FlatList,
     Platform,
@@ -6,8 +6,8 @@ import {
     View,
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { getMessagesForChat, createMessageForChat, markMessagesAsRead } from "@/src/api/messages";
-import { useChatStore } from "@/src/store/chatStore";
+import { getMessagesForChat, createMessageForChat } from "@/src/api/messages";
+import { useChatStore, type PendingOutgoing } from "@/src/store/chatStore";
 import { useUserStore } from "@/src/store/userStore";
 import { useTheme } from "@/src/theme";
 import { Text } from "@/src/components/ui/Text";
@@ -18,41 +18,44 @@ import {
     computeGroupFlags,
     computeDatePillFlags,
     getReceiptStatus,
+    generateClientId,
+    findMatchingPending,
 } from "@/src/utils/messages";
 import type { Chat, Message, User } from "@app/shared-types/models";
 import { LanguageCode, LanguageDisplayName } from "@app/shared-types/enums";
 import { DatePill } from "@/src/components/chat/DatePill";
 import { formatChatDatePill } from "@/src/utils/dateFormat";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useMarkMessagesAsRead } from "@/src/hooks/useMarkMessagesAsRead";
 
 const EMPTY_MESSAGES: Message[] = [];
-const PENDING_OUTGOING_ID = "__pending_outgoing__";
+const EMPTY_PENDING: PendingOutgoing[] = [];
+const PENDING_ID_PREFIX = "__pending__";
 
-function buildPendingOutgoingMessage(
-    text: string,
+function buildPendingMessage(
+    pending: PendingOutgoing,
     myUserId: string,
     chatId: string
 ): Message {
     return {
-        id: PENDING_OUTGOING_ID,
-        chatId: chatId,
-        sender: { id: myUserId, username: "", displayName: "", preferredLang: "", createdAt: new Date().toISOString() },
-        content: { id: "", text, originalLang: "" },
+        id: `${PENDING_ID_PREFIX}${pending.clientId}`,
+        chatId,
+        sender: {
+            id: myUserId,
+            username: "",
+            displayName: "",
+            preferredLang: "",
+            createdAt: new Date(pending.sentAt).toISOString(),
+        },
+        content: { id: "", text: pending.text, originalLang: "" },
         receipts: [],
         isDeleted: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(pending.sentAt).toISOString(),
+        updatedAt: new Date(pending.sentAt).toISOString(),
     };
 }
 
-function messageIsReadForUser(message: Message, userId: string): boolean {
-    return (
-        message.receipts?.some((r) => r.userId === userId && Boolean(r.readAt)) ??
-        false
-    );
-}
-
-type Peer = Omit<User, "createdAt">
+type Peer = Omit<User, "createdAt">;
 
 type ExistingModeProps = {
     mode: "existing";
@@ -66,6 +69,7 @@ type DraftModeProps = {
     onSendFirstMessage: (input: {
         userId: string;
         text: string;
+        clientId: string;
     }) => Promise<{ chat: Chat; message: Message }>;
 };
 
@@ -79,166 +83,157 @@ export default function ChatScreenContent(props: Props) {
         props.mode === "existing" ? props.chatId : null
     );
     const [text, setText] = useState("");
-    const [isSending, setIsSending] = useState(false);
-    const [pendingOutgoingText, setPendingOutgoingText] = useState<string | null>(
-        null
-    );
+    const [isCreatingChat, setIsCreatingChat] = useState(false);
 
-    const isLiveChat = useMemo(() => Boolean(activeChatId), [activeChatId]);
+    const isLiveChat = Boolean(activeChatId) && !isCreatingChat;
 
     const messages = useChatStore((s) =>
-        activeChatId
+        activeChatId && !isCreatingChat
             ? s.messagesByChatId[activeChatId] ?? EMPTY_MESSAGES
             : EMPTY_MESSAGES
     );
     const isLoaded = useChatStore((s) =>
-        activeChatId ? s.loadedChatIds[activeChatId] ?? false : false
+        activeChatId && !isCreatingChat ? s.loadedChatIds[activeChatId] ?? false : false
     );
+
+    // Pending outgoing messages for this chat
+    const pendingChatKey = activeChatId ?? "__draft__";
+    const pendingOutgoing = useChatStore(
+        (s) => s.pendingOutgoingByChatId[pendingChatKey] ?? EMPTY_PENDING
+    );
+
     const appendChat = useChatStore((s) => s.appendChat);
     const setMessagesForChat = useChatStore((s) => s.setMessagesForChat);
     const appendMessage = useChatStore((s) => s.appendMessage);
     const setMessageReceipt = useChatStore((s) => s.setMessageReceipt);
+    const addPendingOutgoing = useChatStore((s) => s.addPendingOutgoing);
+    const removePendingOutgoing = useChatStore((s) => s.removePendingOutgoing);
 
     const me = useUserStore((state) => state.me);
-
-    // Track messages that have been read and are in flight (read receipts are in progress of being ACKed by the server)
-    const readAckedMessageIdsRef = useRef<Set<string>>(new Set());
-    const inFlightReadMessageIdsRef = useRef<Set<string>>(new Set());
 
     // Load messages for the chat
     useEffect(() => {
         (async () => {
-            if (!activeChatId || isLoaded) return;
+            if (!activeChatId || isCreatingChat || isLoaded) return;
             try {
                 const items = await getMessagesForChat({
                     chatId: activeChatId,
-                    limit: 100,  // TODO: pagination
+                    limit: 999, // TODO: pagination
                 });
                 setMessagesForChat(activeChatId, items);
             } catch (e) {
                 console.error(e);
             }
         })();
-    }, [activeChatId, isLoaded, setMessagesForChat]);
+    }, [activeChatId, isCreatingChat, isLoaded, setMessagesForChat]);
 
-    // Clear read and in flight message IDs when opening a new chat
+    // Compare pending outgoing messages with the real messages every time messages changes
+    // If a real message has arrived that matches a pending entry, clear the pending entry
     useEffect(() => {
-        if (!activeChatId) return;
-        readAckedMessageIdsRef.current.clear();
-        inFlightReadMessageIdsRef.current.clear();
-    }, [activeChatId]);
+        if (!activeChatId || isCreatingChat || !me) return;
+        if (pendingOutgoing.length === 0) return;
 
-    // Mark messages as read when opening the chat
-    useEffect(() => {
-        if (!activeChatId || !me || messages.length === 0) return;
-
-        const candidates = messages
-            .filter((m) => m.sender.id !== me.id)
-            .filter((m) => !messageIsReadForUser(m, me.id))
-            .map((m) => m.id)
-            .filter((id) => !readAckedMessageIdsRef.current.has(id));
-
-        const candidatesNotInFlight = candidates.filter(
-            (id) => !inFlightReadMessageIdsRef.current.has(id)
-        );
-
-        if (candidatesNotInFlight.length === 0) return;
-
-        let cancelled = false;
-        (async () => {
-            try {
-                candidatesNotInFlight.forEach((id) =>
-                    inFlightReadMessageIdsRef.current.add(id)
-                );
-                await markMessagesAsRead({ messageIds: candidatesNotInFlight });
-                if (cancelled) return;
-                const readAt = new Date().toISOString();
-                candidatesNotInFlight.forEach((id) => {
-                    setMessageReceipt(id, me.id, { readAt });
-                    readAckedMessageIdsRef.current.add(id);
-                    inFlightReadMessageIdsRef.current.delete(id);
-                });
-            } catch (e) {
-                console.error(e);
-                candidatesNotInFlight.forEach((id) =>
-                    inFlightReadMessageIdsRef.current.delete(id)
-                );
+        for (const msg of messages) {
+            const match = findMatchingPending(msg, pendingOutgoing, me.id);
+            if (match) {
+                removePendingOutgoing(activeChatId, match.clientId);
             }
-        })();
+        }
+    }, [messages, pendingOutgoing, activeChatId, isCreatingChat, me, removePendingOutgoing]);
 
-        return () => {
-            cancelled = true;
-        };
-    }, [activeChatId, me, messages, setMessageReceipt]);
+    useMarkMessagesAsRead({
+        chatId: activeChatId && !isCreatingChat ? activeChatId : null,
+        myUserId: me?.id ?? null,
+        messages,
+        onLocalReceipt: (messageId, readAt) => {
+            if (!me) return;
+            setMessageReceipt(messageId, me.id, { readAt });
+        },
+    });
 
     // Build the list data for the chat
     const listData = useMemo(() => {
-        const canShowPending =
-            Boolean(pendingOutgoingText && me) &&
-            (Boolean(activeChatId) || props.mode === "draft");
-
         const grouped = computeGroupFlags(messages).reverse();
         const withDatePills = computeDatePillFlags(grouped);
 
-        if (!canShowPending || !pendingOutgoingText || !me) {
+        if (pendingOutgoing.length === 0 || !me) {
             return withDatePills;
         }
 
         const chatIdForPending = activeChatId ?? "draft";
-        const pending = buildPendingOutgoingMessage(
-            pendingOutgoingText,
-            me.id,
-            chatIdForPending
-        );
-
-        return [
-            {
-                ...pending,
+        const pendingRendered = [...pendingOutgoing]
+            .sort((a, b) => a.sentAt - b.sentAt)
+            .map((p) => ({
+                ...buildPendingMessage(p, me.id, chatIdForPending),
                 isFirstInGroup: true,
                 isLastInGroup: true,
                 showDatePill: false,
-            },
-            ...withDatePills,
-        ];
-    }, [messages, pendingOutgoingText, me, activeChatId, props.mode]);
+            }))
+            .reverse();
+
+        return [...pendingRendered, ...withDatePills];
+    }, [messages, pendingOutgoing, me, activeChatId]);
 
     async function sendMessage() {
-        if (!text || isSending) return;  // TODO: change so that sending multiple messages is supported
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        if (!me) return;
+
+        const clientId = generateClientId();
+        const pending: PendingOutgoing = {
+            clientId,
+            text: trimmed,
+            sentAt: Date.now(),
+        };
 
         setText("");
-        setPendingOutgoingText(text);
-        setIsSending(true);
 
         try {
-            if (isLiveChat) {
-                const message = await createMessageForChat({
-                    chatId: activeChatId!,
-                    content: { text },
-                });
-                appendMessage(activeChatId!, message);
-                setPendingOutgoingText(null);
+            if (isLiveChat && activeChatId) {
+                addPendingOutgoing(activeChatId, pending);
+                try {
+                    const message = await createMessageForChat({
+                        chatId: activeChatId,
+                        content: { text: trimmed },
+                        clientId,
+                    });
+                    appendMessage(activeChatId, message);
+                    removePendingOutgoing(activeChatId, clientId);
+                } catch (e) {
+                    console.error(e);
+                    removePendingOutgoing(activeChatId, clientId);
+                    setText(trimmed);
+                }
                 return;
             }
 
             if (props.mode === "draft") {
-                setActiveChatId("__creating_chat__");  // So that the UI updates immediately
-                const { chat, message } = await props.onSendFirstMessage({
-                    userId: props.peer.id,
-                    text,
-                });
-                setActiveChatId(chat.id);
-                appendChat(chat.id, chat);
-                appendMessage(chat.id, message);
-                setPendingOutgoingText(null);
+                addPendingOutgoing("__draft__", pending);
+                setIsCreatingChat(true);
+                try {
+                    const { chat, message } = await props.onSendFirstMessage({
+                        userId: props.peer.id,
+                        text: trimmed,
+                        clientId,
+                    });
+
+                    removePendingOutgoing("__draft__", clientId);
+                    appendChat(chat.id, chat);
+                    appendMessage(chat.id, message);
+
+                    setActiveChatId(chat.id);
+                    setIsCreatingChat(false);
+                } catch (e) {
+                    console.error(e);
+                    removePendingOutgoing("__draft__", clientId);
+                    setIsCreatingChat(false);
+                    setText(trimmed);
+                }
                 return;
             }
         } catch (e) {
             console.error(e);
-            setText(text);
-            setPendingOutgoingText(null);
-            setActiveChatId(null);
-        } finally {
-            setIsSending(false);
+            setText(trimmed);
         }
     }
 
@@ -300,7 +295,7 @@ export default function ChatScreenContent(props: Props) {
                     }
                     renderItem={({ item }) => {
                         const mine = item.sender.id === me?.id;
-                        const isPending = item.id === PENDING_OUTGOING_ID;
+                        const isPending = item.id.startsWith(PENDING_ID_PREFIX);
 
                         const hasTranslation = Boolean(item.content.translation);
                         const mainText = hasTranslation
@@ -342,7 +337,7 @@ export default function ChatScreenContent(props: Props) {
                     value={text}
                     onChangeText={setText}
                     onSend={() => sendMessage().catch(() => {})}
-                    isSending={isSending}
+                    canSend={!isCreatingChat}
                 />
             </KeyboardAvoidingView>
         </View>

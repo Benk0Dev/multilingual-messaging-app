@@ -6,6 +6,8 @@ import { useUserStore } from "@/src/store/userStore";
 import { useChatStore } from "@/src/store/chatStore";
 import { markMessagesAsDelivered } from "@/src/api/messages";
 import { getMe } from "@/src/api/users";
+import { useChatSync } from "@/src/hooks/useChatSync";
+import { getChats } from "@/src/api/chats";
 
 export default function AppLayout() {
     const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -16,7 +18,7 @@ export default function AppLayout() {
     const appendChat = useChatStore((state) => state.appendChat);
     const appendMessage = useChatStore((state) => state.appendMessage);
     const setMessageReceipt = useChatStore((state) => state.setMessageReceipt);
-    const clearAllChats = useChatStore((state) => state.clearAll);
+    const setChats = useChatStore((state) => state.setChats);
 
     // Load current user once
     useEffect(() => {
@@ -39,11 +41,10 @@ export default function AppLayout() {
         })();
         return () => {
             isActive = false;
-            clearAllChats();
         };
-    }, [clearAllChats]);
+    }, []);
 
-    useAppWebSocket({
+        const { connectionCount } = useAppWebSocket({
         accessToken,
         onEvent: (event) => {
             if (event.type === "chat.created") {
@@ -51,7 +52,21 @@ export default function AppLayout() {
             }
 
             if (event.type === "message.created") {
-                appendMessage(event.message.chat.id, event.message);
+                appendMessage(event.message.chatId, event.message);
+
+                const knownChatIds = new Set(
+                    useChatStore.getState().chats.map((c) => c.id)
+                );
+                if (!knownChatIds.has(event.message.chatId)) {
+                    (async () => {
+                        try {
+                            const refreshed = await getChats();
+                            setChats(refreshed);
+                        } catch (e) {
+                            console.warn("Failed to refresh chats after unknown-chat message", e);
+                        }
+                    })();
+                }
 
                 if (me && event.message.sender.id !== me.id) {
                     markMessagesAsDelivered({
@@ -70,6 +85,8 @@ export default function AppLayout() {
             }
         },
     });
+
+    useChatSync(connectionCount, Boolean(accessToken));
 
     return (
         <Tabs

@@ -10,18 +10,17 @@ interface MessageInputProps {
     value: string;
     onChangeText: (text: string) => void;
     onSend: () => void;
-    isSending?: boolean;
+    canSend?: boolean;
 }
 
 export function MessageInput({
     value,
     onChangeText,
     onSend,
-    isSending = false,
+    canSend = true,
 }: MessageInputProps) {
     const { colors, radii, spacing } = useTheme();
     const insets = useSafeAreaInsets();
-    const canSend = value.trim().length > 0 && !isSending;
 
     const anim = useRef(new Animated.Value(0)).current;
 

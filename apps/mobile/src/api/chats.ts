@@ -13,12 +13,14 @@ export async function createChatAndSendFirstMessage(params: {
     content: {
         text: string;
     };
+    clientId?: string;
 }): Promise<{ chat: Chat, message: Message }> {
     const data = await api<{ chat: Chat, message: Message }>(`/api/chats`, {
         method: "POST",
         body: JSON.stringify({
             userIds: params.userIds,
             content: params.content,
+            ...(params.clientId ? { clientId: params.clientId } : {}),
         }),
     });
     return data;

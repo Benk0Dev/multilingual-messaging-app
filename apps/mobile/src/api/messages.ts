@@ -4,10 +4,14 @@ import { Message } from "@app/shared-types/models";
 export async function getMessagesForChat(params: {
     chatId: string;
     limit?: number;
+    since?: string;
 }): Promise<Message[]> {
     const query = new URLSearchParams();
     if (params.limit) {
         query.set("limit", params.limit.toString());
+    }
+    if (params.since) {
+        query.set("since", params.since);
     }
     const url = `/api/chats/${params.chatId}/messages?${query.toString()}`;
     const data = await api<{ messages: Message[] }>(url, {
@@ -21,11 +25,13 @@ export async function createMessageForChat(params: {
     content: {
         text: string;
     };
+    clientId?: string;
 }) {
     const data = await api<{ message: Message }>(`/api/chats/${params.chatId}/messages`, {
         method: "POST",
         body: JSON.stringify({
             content: params.content,
+            ...(params.clientId ? { clientId: params.clientId } : {}),
         }),
     });
     return data.message;

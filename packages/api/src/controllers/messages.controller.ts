@@ -16,7 +16,7 @@ export async function createMessageForChat(req: Request, res: Response) {
         });
 
         return res.status(201).json({
-            message,
+            message: {...message, clientId: body.clientId},
         });
     } catch (err: any) {
         console.error(err);
@@ -40,12 +40,13 @@ export async function createMessageForChat(req: Request, res: Response) {
 export async function getMessagesForChat(req: Request, res: Response) {
     try {
         const { chatId } = req.validated?.params as { chatId: Uuid };
-        const { limit } = req.validated?.query as unknown as GetMessagesQuery;
+        const { limit, since } = req.validated?.query as unknown as GetMessagesQuery;
         
         const { messages } = await messagesService.getMessagesForChat({
             userId: req.auth!.sub,
             chatId,
             limit,
+            since,
         });
 
         return res.status(200).json({ messages });

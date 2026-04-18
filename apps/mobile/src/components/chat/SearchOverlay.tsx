@@ -16,7 +16,7 @@ import Animated, {
     Easing,
     runOnJS,
 } from "react-native-reanimated";
-import { Ionicons, Feather, FontAwesome } from "@expo/vector-icons";
+import { Ionicons, Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../theme";
 import { Text } from "../ui/Text";
@@ -183,15 +183,28 @@ export function SearchOverlay({
     const { withChat, withoutChat } = useMemo(() => {
         const w: SearchUsersResult[] = [];
         const wo: SearchUsersResult[] = [];
+
+        const chatByPeerId = new Map<string, typeof chats[number]>();
+        if (me) {
+            for (const c of chats) {
+                const peer = c.members.find((m) => m.id !== me.id) ?? c.members[0];
+                if (peer) chatByPeerId.set(peer.id, c);
+            }
+        }
+
         for (const r of searchResults) {
-            if (r.chat) {
-                w.push(r);
+            const liveChat = chatByPeerId.get(r.user.id);
+            if (liveChat) {
+                w.push({ ...r, chat: liveChat });
+            }
+            else if (r.chat) {
+                w.push({ ...r, chat: r.chat });
             } else {
                 wo.push(r);
             }
         }
         return { withChat: w, withoutChat: wo };
-    }, [searchResults]);
+    }, [searchResults, chats, me]);
 
     if (!isRendered) return null;
 
@@ -311,9 +324,7 @@ export function SearchOverlay({
                                     {withChat.map((result, i) => {
                                         const chat = result.chat!;
                                         const peer = result.user;
-                                        // Prefer live store data over the stale API snapshot
-                                        const liveChat = chats.find((c) => c.id === chat.id) ?? chat;
-                                        const last = liveChat.lastMessage;
+                                        const last = chat.lastMessage;
                                         const lastOriginalText = last?.content.text ?? "";
                                         const lastTranslatedText = last?.content.translation?.translatedText ?? null;
                                         const lastPreview =

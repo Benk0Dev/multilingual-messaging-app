@@ -9,6 +9,7 @@ export type Message = {
     isDeleted: boolean;
     createdAt: string;
     updatedAt: string;
+    clientId?: string;
 }
 
 export type LastMessage = {

@@ -31,6 +31,7 @@ export default function NewChatRoute() {
                 const data = await createChatAndSendFirstMessage({
                     userIds: [input.userId],
                     content: { text: input.text },
+                    clientId: input.clientId,
                 });
                 return data;
             }}

@@ -41,6 +41,7 @@ export default function useAppWebSocket({ accessToken, onEvent }: UseAppWebSocke
     const intentionallyClosedRef = useRef(false);
 
     const [isConnected, setIsConnected] = useState(false);
+    const [connectionCount, setConnectionCount] = useState(0);
 
     useEffect(() => {
         onEventRef.current = onEvent;
@@ -76,9 +77,10 @@ export default function useAppWebSocket({ accessToken, onEvent }: UseAppWebSocke
             wsRef.current = ws;
 
             ws.onopen = () => {
-                console.log("Connected to WebSocket");
+                console.log("useAppWebSocket: Connected to WebSocket");
                 reconnectAttemptRef.current = 0;
                 setIsConnected(true);
+                setConnectionCount((count) => count + 1);
             };
 
             ws.onmessage = (event) => {
@@ -86,30 +88,30 @@ export default function useAppWebSocket({ accessToken, onEvent }: UseAppWebSocke
                     const payload = JSON.parse(event.data) as WsEvent;
                     onEventRef.current?.(payload);
                 } catch (error) {
-                    console.error("Failed to parse WebSocket message", error);
+                    console.error("useAppWebSocket: Failed to parse WebSocket message", error);
                 }
             };
 
             ws.onerror = (error) => {
-                console.error("Error from WebSocket", error);
+                console.error("useAppWebSocket: ", error);
             };
 
             ws.onclose = () => {
-                console.log("Disconnected from WebSocket");
+                console.log("useAppWebSocket: Disconnected from WebSocket");
                 setIsConnected(false);
                 wsRef.current = null;
 
                 if (cancelled || intentionallyClosedRef.current || !accessToken) return;
 
                 if (reconnectAttemptRef.current >= MAX_RECONNECT_ATTEMPTS) {
-                    console.warn("Max reconnect attempts reached");
+                    console.warn("useAppWebSocket: Max reconnect attempts reached");
                     return;
                 }
 
                 const delay = getReconnectDelay(reconnectAttemptRef.current);
                 reconnectAttemptRef.current++;
 
-                console.log(`Reconnecting WebSocket in ${delay}ms`);
+                console.log(`useAppWebSocket: Reconnecting WebSocket in ${delay}ms`);
 
                 reconnectTimeoutRef.current = setTimeout(() => {
                     reconnectTimeoutRef.current = null;
@@ -139,5 +141,5 @@ export default function useAppWebSocket({ accessToken, onEvent }: UseAppWebSocke
         };
     }, [accessToken]);
 
-  return { isConnected };
+  return { isConnected, connectionCount };
 };

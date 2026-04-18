@@ -1,4 +1,5 @@
 import type { Message } from "@app/shared-types/models";
+import { PendingOutgoing } from "../store/chatStore";
 
 export interface GroupFlags {
     isFirstInGroup: boolean;
@@ -81,4 +82,35 @@ export function countUnread(
         if (!myReceipt || !myReceipt.readAt) count++;
     }
     return count;
+}
+
+export function generateClientId(): string {
+    // Time + random so concurrent sends don't collide.
+    return `c_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+const MATCH_WINDOW_MS = 15_000;
+
+export function findMatchingPending(
+    message: Message,
+    pending: PendingOutgoing[],
+    mySenderId: string
+): PendingOutgoing | null {
+    if (pending.length === 0) return null;
+    if (message.sender.id !== mySenderId) return null;
+
+    const clientIdOnMessage = (message as Message & { clientId?: string }).clientId;
+    if (clientIdOnMessage) {
+        const exact = pending.find((p) => p.clientId === clientIdOnMessage);
+        if (exact) return exact;
+    }
+
+    // Fallback: match on text and sentAt
+    const serverCreatedAt = new Date(message.createdAt).getTime();
+    const candidates = pending
+        .filter((p) => p.text === message.content.text)
+        .filter((p) => Math.abs(serverCreatedAt - p.sentAt) <= MATCH_WINDOW_MS)
+        .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+
+    return candidates[0] ?? null;
 }
