@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { WEBSOCKET_URL } from "../../src/config";
 import { Chat, Message, MessageReceiptUpdate } from "@app/shared-types/models";
+import { AppStateStatus } from "react-native";
+import { AppState } from "react-native";
 
 type ChatCreatedEvent = {
     type: "chat.created";
@@ -26,7 +28,8 @@ type UseAppWebSocketParams = {
 
 const MAX_RECONNECT_ATTEMPTS = 10;
 const BASE_RECONNECT_DELAY_MS = 1000;
-const MAX_RECONNECT_DELAY_MS = 10000;
+const MAX_RECONNECT_DELAY_MS = 30_000;
+const HEARTBEAT_INTERVAL_MS = 4 * 60 * 1000;
 
 function getReconnectDelay(attempt: number) {
     const delay = BASE_RECONNECT_DELAY_MS * Math.pow(2, attempt);
@@ -39,6 +42,8 @@ export default function useAppWebSocket({ accessToken, onEvent }: UseAppWebSocke
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const reconnectAttemptRef = useRef(0);
     const intentionallyClosedRef = useRef(false);
+    const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const connectRef = useRef<(() => void) | null>(null);
 
     const [isConnected, setIsConnected] = useState(false);
     const [connectionCount, setConnectionCount] = useState(0);
@@ -55,6 +60,10 @@ export default function useAppWebSocket({ accessToken, onEvent }: UseAppWebSocke
                 clearTimeout(reconnectTimeoutRef.current);
                 reconnectTimeoutRef.current = null;
             }
+            if (heartbeatIntervalRef.current) {
+                clearInterval(heartbeatIntervalRef.current);
+                heartbeatIntervalRef.current = null;
+            }
             
             if (wsRef.current) {
                 wsRef.current.close();
@@ -62,12 +71,33 @@ export default function useAppWebSocket({ accessToken, onEvent }: UseAppWebSocke
             }
 
             reconnectAttemptRef.current = 0;
+            connectRef.current = null;
             setIsConnected(false);
             return;
         }
 
         intentionallyClosedRef.current = false;
         let cancelled = false;
+
+        const startHeartbeat = (ws: WebSocket) => {
+            if (heartbeatIntervalRef.current) {
+                clearInterval(heartbeatIntervalRef.current);
+            }
+            heartbeatIntervalRef.current = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    try {
+                        ws.send(JSON.stringify({ action: "ping" }));
+                    } catch {}
+                }
+            }, HEARTBEAT_INTERVAL_MS);
+        };
+
+        const stopHeartbeat = () => {
+            if (heartbeatIntervalRef.current) {
+                clearInterval(heartbeatIntervalRef.current);
+                heartbeatIntervalRef.current = null;
+            }
+        };
 
         const connect = () => {
             if (cancelled || !accessToken) return;
@@ -81,6 +111,7 @@ export default function useAppWebSocket({ accessToken, onEvent }: UseAppWebSocke
                 reconnectAttemptRef.current = 0;
                 setIsConnected(true);
                 setConnectionCount((count) => count + 1);
+                startHeartbeat(ws);
             };
 
             ws.onmessage = (event) => {
@@ -92,19 +123,24 @@ export default function useAppWebSocket({ accessToken, onEvent }: UseAppWebSocke
                 }
             };
 
-            ws.onerror = (error) => {
-                console.error("useAppWebSocket: ", error);
+            ws.onerror = () => {
+                console.error("useAppWebSocket: Error");
             };
 
-            ws.onclose = () => {
-                console.log("useAppWebSocket: Disconnected from WebSocket");
+            ws.onclose = (event) => {
+                console.log(
+                    `useAppWebSocket: Disconnected (code=${event.code}${
+                        event.reason ? `, reason=${event.reason}` : ""
+                    })`
+                );
                 setIsConnected(false);
                 wsRef.current = null;
+                stopHeartbeat();
 
                 if (cancelled || intentionallyClosedRef.current || !accessToken) return;
 
                 if (reconnectAttemptRef.current >= MAX_RECONNECT_ATTEMPTS) {
-                    console.warn("useAppWebSocket: Max reconnect attempts reached");
+                    console.warn("useAppWebSocket: Max reconnect attempts reached; will retry on app foreground");
                     return;
                 }
 
@@ -120,16 +156,42 @@ export default function useAppWebSocket({ accessToken, onEvent }: UseAppWebSocke
             };
         };
 
+        connectRef.current = connect;
         connect();
 
-        return () => {
-            cancelled = true;
-            intentionallyClosedRef.current = true;
+        // Re-connect when the app comes back to the foreground and reset the reconnect attempts to 0
+        let prevAppState: AppStateStatus = AppState.currentState;
+        const appStateSub = AppState.addEventListener("change", (next) => {
+            const prev = prevAppState;
+            prevAppState = next;
+            if (!prev.match(/inactive|background/) || next !== "active") return;
+            if (cancelled || intentionallyClosedRef.current || !accessToken) return;
+
+            const ws = wsRef.current;
+            const isAlive = ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING);
+            if (isAlive) return;
 
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current);
                 reconnectTimeoutRef.current = null;
             }
+            reconnectAttemptRef.current = 0;
+            console.log("useAppWebSocket: Foreground - retrying connection");
+            connect();
+        });
+
+        return () => {
+            cancelled = true;
+            intentionallyClosedRef.current = true;
+            connectRef.current = null;
+
+            appStateSub.remove();
+
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current);
+                reconnectTimeoutRef.current = null;
+            }
+            stopHeartbeat();
 
             if (wsRef.current) {
                 wsRef.current.close();
