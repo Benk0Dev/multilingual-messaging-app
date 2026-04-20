@@ -3,3 +3,4 @@ export { lightTheme, darkTheme, type AppTheme } from './theme';
 export { avatarPalette } from './colors';
 export type { TypographyVariant } from './typography';
 export { spacing, radii, avatarSizes } from './spacing';
+export { useInputTheme } from './useInputTheme';

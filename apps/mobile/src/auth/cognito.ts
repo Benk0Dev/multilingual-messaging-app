@@ -1,8 +1,8 @@
 import {
     CognitoIdentityProviderClient,
-    SignUpCommand,
     InitiateAuthCommand,
     RespondToAuthChallengeCommand,
+    SignUpCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 import * as SecureStore from "expo-secure-store";
 import { v4 as uuidv4 } from "uuid";
@@ -16,14 +16,15 @@ function generateThrowawayPassword() {
     const random = uuidv4();
     return `Aa1!${random}`;
 }
-
-export async function signUp(identifier: string, email: string) {
+ 
+// Caller should treat UsernameExistsException as "already registered, proceed to OTP".
+export async function signUp(email: string) {
     const password = generateThrowawayPassword();
-  
+ 
     await client.send(
         new SignUpCommand({
             ClientId: COGNITO_USER_POOL_CLIENT_ID,
-            Username: identifier,
+            Username: email,
             Password: password,
             UserAttributes: [
                 { Name: "email", Value: email },
@@ -32,55 +33,83 @@ export async function signUp(identifier: string, email: string) {
     );
 }
 
-export async function startEmailOtp(identifier: string) {
+export async function startEmailOtp(email: string) {
     const res = await client.send(
         new InitiateAuthCommand({
             ClientId: COGNITO_USER_POOL_CLIENT_ID,
             AuthFlow: "USER_AUTH",
             AuthParameters: {
-                USERNAME: identifier,
+                USERNAME: email,
                 PREFERRED_CHALLENGE: "EMAIL_OTP",
             },
         })
     );
-  
+
     return {
         session: res.Session,
     };
 }
 
+export type VerifyOtpResult =
+    | { ok: true }
+    | { ok: false; reason: "wrong_code" | "expired" | "unknown"; nextSession: string | null };
+
 export async function verifyEmailOtp(
-    identifier: string,
+    email: string,
     session: string,
     code: string
-) {
-    const res = await client.send(
-        new RespondToAuthChallengeCommand({
-            ClientId: COGNITO_USER_POOL_CLIENT_ID,
-            ChallengeName: "EMAIL_OTP",
-            Session: session,
-            ChallengeResponses: {
-                USERNAME: identifier,
-                EMAIL_OTP_CODE: code,
-            },
-        })
-    );
-  
-    const result = res.AuthenticationResult;
-  
-    if (!result) throw new Error("No auth result");
-  
-    await SecureStore.setItemAsync(
-        TOKEN_KEY,
-        JSON.stringify({
-            accessToken: result.AccessToken!,
-            idToken: result.IdToken!,
-            refreshToken: result.RefreshToken!,
-            expiresAt: Date.now() + result.ExpiresIn! * 1000,
-        } satisfies StoredTokens)
-    );
-  
-    return result;
+): Promise<VerifyOtpResult> {
+    try {
+        const res = await client.send(
+            new RespondToAuthChallengeCommand({
+                ClientId: COGNITO_USER_POOL_CLIENT_ID,
+                ChallengeName: "EMAIL_OTP",
+                Session: session,
+                ChallengeResponses: {
+                    USERNAME: email,
+                    EMAIL_OTP_CODE: code,
+                },
+            })
+        );
+
+        const result = res.AuthenticationResult;
+
+        if (!result) {
+            return {
+                ok: false,
+                reason: "wrong_code",
+                nextSession: res.Session ?? null,
+            };
+        }
+
+        await SecureStore.setItemAsync(
+            TOKEN_KEY,
+            JSON.stringify({
+                accessToken: result.AccessToken!,
+                idToken: result.IdToken!,
+                refreshToken: result.RefreshToken!,
+                expiresAt: Date.now() + result.ExpiresIn! * 1000,
+            } satisfies StoredTokens)
+        );
+
+        return { ok: true };
+    } catch (e: any) {
+        const nextSession: string | null =
+            e?.$response?.body?.Session ??
+            e?.Session ??
+            null;
+
+        const name = e?.name;
+        if (name === "CodeMismatchException" || name === "NotAuthorizedException") {
+            return { ok: false, reason: "wrong_code", nextSession };
+        }
+        if (name === "ExpiredCodeException") {
+            return { ok: false, reason: "expired", nextSession };
+        }
+
+        console.error("verifyEmailOtp unexpected error", e);
+        return { ok: false, reason: "unknown", nextSession };
+    }
 }
 
 export async function refreshAuthSession(refreshToken: string) {

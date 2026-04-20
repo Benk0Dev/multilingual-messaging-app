@@ -18,7 +18,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../../theme";
+import { useTheme, useInputTheme } from "../../theme";
 import { Text } from "../ui/Text";
 import { ChatListItem } from "./ChatListItem";
 import { SearchUserItem } from "./SearchUserItem";
@@ -63,6 +63,7 @@ export function SearchOverlay({
     onNavigateToNewChat,
 }: SearchOverlayProps) {
     const { colors, spacing, radii, avatarSizes } = useTheme();
+    const inputTheme = useInputTheme();
     const insets = useSafeAreaInsets();
 
     const me = useUserStore((s) => s.me);
@@ -264,9 +265,8 @@ export function SearchOverlay({
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                             placeholder="Search users..."
-                            placeholderTextColor={colors.textTertiary}
+                            {...inputTheme}
                             style={[styles.textInput, { color: colors.textPrimary }]}
-                            selectionColor={colors.primary}
                             autoCapitalize="none"
                             autoCorrect={false}
                             returnKeyType="search"

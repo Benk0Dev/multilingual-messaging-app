@@ -7,6 +7,12 @@ const fontFamily = Platform.select({
 });
 
 export const typography = {
+    welcomeTitle: {
+        fontFamily,
+        fontSize: 42,
+        fontWeight: '700' as TextStyle['fontWeight'],
+        lineHeight: 60,
+    },
     screenTitle: {
         fontFamily,
         fontSize: 28,

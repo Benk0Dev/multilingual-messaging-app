@@ -22,7 +22,8 @@ import {
     findMatchingPending,
 } from "@/src/utils/messages";
 import type { Chat, Message, User } from "@app/shared-types/models";
-import { LanguageCode, LanguageDisplayName } from "@app/shared-types/enums";
+import { LanguageCode } from "@app/shared-types/enums";
+import { LanguageDisplayName } from "@/src/constants/languages";
 import { DatePill } from "@/src/components/chat/DatePill";
 import { formatChatDatePill } from "@/src/utils/dateFormat";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

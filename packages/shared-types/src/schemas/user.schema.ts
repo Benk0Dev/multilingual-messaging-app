@@ -7,9 +7,11 @@ export const usernameSchema = z
     .max(15)
     .regex(/^[A-Za-z0-9_]+$/);
 
-export const newUserDetailsBodySchema = z.object({
+export const createUserBodySchema = z.object({
+    username: usernameSchema,
     displayName: z.string().min(1).max(255),
     preferredLang: z.nativeEnum(LanguageCode),
+    pictureUrl: z.string().url().optional(),
 });
 
 export const searchUsersQuerySchema = z.object({
@@ -22,5 +24,15 @@ export const searchUsersQuerySchema = z.object({
         .default(10),
 });
 
-export type NewUserDetailsBody = z.infer<typeof newUserDetailsBodySchema>;
+export const usernameAvailableQuerySchema = z.object({
+    username: usernameSchema,
+});
+ 
+export const profilePictureUploadUrlQuerySchema = z.object({
+    extension: z.enum(["jpg", "jpeg", "png", "webp"]),
+});
+ 
+export type CreateUserBody = z.infer<typeof createUserBodySchema>;
 export type SearchUsersQuery = z.infer<typeof searchUsersQuerySchema>;
+export type UsernameAvailableQuery = z.infer<typeof usernameAvailableQuerySchema>;
+export type ProfilePictureUploadUrlQuery = z.infer<typeof profilePictureUploadUrlQuerySchema>;

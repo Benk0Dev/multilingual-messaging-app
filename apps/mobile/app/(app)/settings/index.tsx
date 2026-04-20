@@ -11,7 +11,6 @@ export default function SettingsScreen() {
 
     async function onLogout() {
         await logout();
-        router.replace("/(auth)/test/dev-auth-test");
     }
 
     return (

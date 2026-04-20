@@ -4,11 +4,13 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { DatabaseStack } from "./stacks/database-stack"
 import { AuthStack } from "./stacks/auth-stack"
 import { WebSocketStack } from "./stacks/websocket-stack"
+import { StorageStack } from "./stacks/storage-stack"
 
 export class InfraStack extends cdk.Stack {
     public readonly db: DatabaseStack;
     public readonly auth: AuthStack;
     public readonly ws: WebSocketStack;
+    public readonly storage: StorageStack;
 
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
@@ -30,5 +32,6 @@ export class InfraStack extends cdk.Stack {
                 clientId: this.auth.userPoolClient.userPoolClientId,
             },
         });
+        this.storage = new StorageStack(this, "Storage");
     }
 }

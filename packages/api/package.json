@@ -18,10 +18,13 @@
     "@app/shared-types": "^0.1.0",
     "@aws-sdk/client-apigatewaymanagementapi": "^3.1014.0",
     "@aws-sdk/client-dynamodb": "^3.1014.0",
+    "@aws-sdk/client-s3": "^3.1032.0",
     "@aws-sdk/client-translate": "^3.1014.0",
+    "@aws-sdk/s3-request-presigner": "^3.1032.0",
     "aws-jwt-verify": "^5.1.1",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "jwks-rsa": "^3.2.2"
+    "jwks-rsa": "^3.2.2",
+    "uuid": "^14.0.0"
   }
 }

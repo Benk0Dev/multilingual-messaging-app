@@ -1,100 +1,104 @@
 import { createUser, getMe } from "../api/users";
-import {
-    signUp as signUpCognito,
-    startEmailOtp,
-    verifyEmailOtp,
-} from "./cognito";
+import { signUp, startEmailOtp, verifyEmailOtp } from "./cognito";
 import { clearSession } from "./session";
-import { usernameSchema, newUserDetailsBodySchema } from "@app/shared-types/schemas";
 import { LanguageCode } from "@app/shared-types/enums";
 import { useChatStore } from "../store/chatStore";
+import { useUserStore } from "../store/userStore";
+import { useOnboardingStore } from "../store/onboardingStore";
+import type { VerifyOtpResult } from "./cognito";
+import { router } from "expo-router";
 
-function isEmailExistsError(err: any) {
-    return err?.name === "EmailExistsException";
-}
-
-function isUserExistsError(err: any) {
+function isUserAlreadyExists(err: any): boolean {
     return err?.name === "UsernameExistsException";
 }
 
-export async function signUp(params: {
+export async function startSignIn(params: {
     email: string;
-    username: string;
 }) {
+    // Try to register the email first - if it already exists, carry on to OTP
     try {
-        const validatedUsername = usernameSchema.safeParse(params.username);
-
-        if (!validatedUsername.success || !validatedUsername.data) {
-            throw new Error("Username is invalid");
-        }
-        
-        await signUpCognito(validatedUsername.data, params.email);
+        await signUp(params.email);
     } catch (e: any) {
-        if (isEmailExistsError(e)) {
-            throw new Error("Email already exists");
-        } else if (isUserExistsError(e)) {
-            throw new Error("Username already exists");
-        } else {
+        if (!isUserAlreadyExists(e)) {
             console.error(e);
-            throw new Error("Failed to sign up");
+            throw new Error("Failed to start sign in");
         }
     }
-}
 
-export async function startSignIn(params: {
-    identifier: string; // email or username
-}) {
     try {
-        const res = await startEmailOtp(params.identifier);
+        const res = await startEmailOtp(params.email);
         return res;
     } catch (e: any) {
+        console.error(e);
         throw new Error("Failed to start sign in");
     }
 }
 
 export async function finishSignIn(params: {
-    identifier: string;
+    email: string;
     session: string;
     code: string;
-}) {
+}): Promise<VerifyOtpResult> {
+    const result = await verifyEmailOtp(params.email, params.session, params.code);
+
+    if (!result.ok) {
+        return result;
+    }
+
     try {
-        await verifyEmailOtp(params.identifier, params.session, params.code);
-        const user = await getMe();
-        return user;
-    } catch (e: any) {
-        throw new Error("Failed to finish sign in");
+        await bootstrap();
+        return { ok: true };
+    } catch (e) {
+        console.error("bootstrap after OTP failed", e);
+        return { ok: false, reason: "unknown", nextSession: null };
     }
 }
 
-export async function finishFirstSignIn(params: {
-    identifier: string;
-    session: string;
-    code: string;
+export async function bootstrap() {
+    useUserStore.getState().setChecked(false);
+    
+    try {
+        const { user } = await getMe();
+        useUserStore.getState().setMe(user);
+    } catch (e) {
+        console.error("Bootstrap failed:", e);
+        throw e;
+    } finally {
+        useUserStore.getState().setChecked(true);
+    }
+}
+
+export async function completeOnboarding(params: {
+    username: string;
     displayName: string;
     preferredLang: LanguageCode;
+    pictureUrl?: string;
 }) {
     try {
-        const validatedNewUserDetails = newUserDetailsBodySchema.safeParse({
+        const { user } = await createUser({
+            username: params.username,
             displayName: params.displayName,
             preferredLang: params.preferredLang,
+            pictureUrl: params.pictureUrl,
         });
 
-        if (!validatedNewUserDetails.success || !validatedNewUserDetails.data) {
-            throw new Error("User details are invalid");
-        }
+        useUserStore.getState().setMe(user);
+        useOnboardingStore.getState().reset();
 
-        await verifyEmailOtp(params.identifier, params.session, params.code);
-        const user = await createUser({
-            displayName: validatedNewUserDetails.data.displayName,
-            preferredLang: validatedNewUserDetails.data.preferredLang,
-        });
         return user;
     } catch (e: any) {
-        throw new Error("Failed to finish first sign in");
+        console.error(e);
+        throw e;
     }
 }
 
 export async function logout() {
+    if (router.canGoBack()) {
+        router.dismissAll();
+    }
     useChatStore.getState().clearAll();
+    useUserStore.getState().clear();
+    useUserStore.getState().setChecked(true);
+    useOnboardingStore.getState().reset();
     await clearSession();
 }

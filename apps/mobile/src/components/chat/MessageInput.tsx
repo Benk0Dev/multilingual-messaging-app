@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, TextInput, Pressable, StyleSheet, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../theme';
+import { useTheme, useInputTheme } from '../../theme';
 
 const SEND_BTN_SIZE = 36;
 
@@ -21,6 +21,7 @@ export function MessageInput({
 }: MessageInputProps) {
     const { colors, radii, spacing } = useTheme();
     const insets = useSafeAreaInsets();
+    const inputTheme = useInputTheme();
 
     const anim = useRef(new Animated.Value(0)).current;
 
@@ -53,8 +54,8 @@ export function MessageInput({
                     value={value}
                     onChangeText={onChangeText}
                     placeholder="Type a message..."
-                    placeholderTextColor={colors.textTertiary}
                     multiline
+                    {...inputTheme}
                     style={[
                         styles.input,
                         {
@@ -64,7 +65,6 @@ export function MessageInput({
                             color: colors.textPrimary,
                         },
                     ]}
-                    selectionColor={colors.primary}
                 />
             </Animated.View>
             <Animated.View

@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { useTheme } from "@/src/theme";
 
-export default function AuthLayout() {
+export default function OnboardingLayout() {
     const { colors } = useTheme();
 
     return (
@@ -10,9 +10,8 @@ export default function AuthLayout() {
                 headerShown: false,
                 contentStyle: { backgroundColor: colors.bg },
                 animation: "slide_from_right",
+                gestureEnabled: true,
             }}
-        >
-            <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
-        </Stack>
+        />
     );
 }

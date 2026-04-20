@@ -1,11 +1,21 @@
 import { prisma } from "@app/db";
 import { User, SearchUsersResult } from "@app/shared-types/models";
 
+function isUniqueConstraintError(err: unknown): boolean {
+    return (
+        typeof err === "object" &&
+        err !== null &&
+        "code" in err &&
+        (err as { code: unknown }).code === "P2002"
+    );
+}
+
 export async function createUser(input: {
     id: string;
     username: string;
     displayName: string;
     preferredLang: string;
+    pictureUrl?: string;
 }): Promise<User> {
     const existing = await prisma.user.findUnique({
         where: {
@@ -17,21 +27,50 @@ export async function createUser(input: {
         throw new Error("already_exists");
     }
 
-    const user = await prisma.user.create({
-        data: {
+    try {
+        const user = await prisma.user.create({
+            data: {
+                id: input.id,
+                username: input.username,
+                displayName: input.displayName,
+                preferredLang: input.preferredLang,
+                pictureUrl: input.pictureUrl,
+            },
+            select: {
+                id: true,
+                username: true,
+                displayName: true,
+                preferredLang: true,
+                pictureUrl: true,
+                createdAt: true,
+            },
+        });
+
+        return {
+            ...user,
+            id: user.id.toString(),
+            createdAt: user.createdAt.toISOString(),
+        };
+    } catch (err) {
+        if (isUniqueConstraintError(err)) {
+            throw new Error("username_taken");
+        }
+        throw err;
+    }
+}
+
+export async function findUser(input: {
+    id: string;
+}): Promise<User | null> {
+    const user = await prisma.user.findUnique({
+        where: {
             id: input.id,
-            username: input.username,
-            displayName: input.displayName,
-            preferredLang: input.preferredLang,
-        },
-        select: {
-            id: true,
-            username: true,
-            displayName: true,
-            preferredLang: true,
-            createdAt: true,
         },
     });
+
+    if (!user) {
+        return null;
+    }
 
     return {
         ...user,
@@ -40,24 +79,19 @@ export async function createUser(input: {
     };
 }
 
-export async function getUser(input: { 
-    id: string;
-}): Promise<User> {
-    const user = await prisma.user.findUnique({
+export async function isUsernameAvailable(input: {
+    username: string;
+}): Promise<boolean> {
+    const existing = await prisma.user.findUnique({
         where: {
-            id: input.id,
+            username: input.username,
+        },
+        select: {
+            id: true,
         },
     });
 
-    if (!user) {
-        throw new Error("not_found");
-    }
-
-    return {
-        ...user,
-        id: user.id.toString(),
-        createdAt: user.createdAt.toISOString(),
-    };
+    return existing === null;
 }
 
 export async function searchUsers(input: {

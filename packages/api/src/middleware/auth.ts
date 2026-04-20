@@ -7,7 +7,6 @@ declare global {
         interface Request {
             auth?: {
                 sub: string;
-                username?: string;
             };
         }
     }
@@ -37,10 +36,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
             return res.status(401).json({ error: "Token missing sub" });
         }
 
-        req.auth = {
-            sub,
-            username: typeof payload.username === "string" ? payload.username : undefined,
-        };
+        req.auth = { sub };
 
         return next();
     } catch (e) {

@@ -181,7 +181,7 @@ export default function ChatsScreen() {
                                 No chats yet
                             </Text>
                             <Text variant="secondary" color={colors.textSecondary} align="center" style={{ marginTop: 6, maxWidth: 240 }}>
-                                Use search above to find people and start talking.
+                                Use search above to find people and start talking
                             </Text>
                         </View>
                     )

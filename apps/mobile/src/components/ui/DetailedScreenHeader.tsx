@@ -2,10 +2,10 @@ import React from "react";
 import { View, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import { useTheme } from "../../theme";
 import { Text } from "./Text";
 import { Avatar } from "./Avatar";
+import { BackButton } from "./BackButton";
 
 interface DetailedScreenHeaderProps {
     title: string;
@@ -46,17 +46,7 @@ export function DetailedScreenHeader({
         >
             <View style={styles.row}>
                 {showBack && (
-                    <Pressable
-                        onPress={() => router.back()}
-                        hitSlop={12}
-                        style={styles.backButton}
-                    >
-                        <Ionicons
-                            name="chevron-back"
-                            size={24}
-                            color={colors.textPrimary}
-                        />
-                    </Pressable>
+                    <BackButton />
                 )}
 
                 {avatarName && (
@@ -119,9 +109,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-    },
-    backButton: {
-        marginRight: -2,
     },
     titleBlock: {
         flex: 1,

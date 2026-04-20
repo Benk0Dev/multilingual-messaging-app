@@ -13,7 +13,7 @@ export class AuthStack extends cdk.NestedStack {
         super(scope, id, props);
 
         this.userPool = new cognito.UserPool(this, "UserPool", {
-            signInAliases: { username: true, email: true },
+            signInAliases: { email: true },
             signInPolicy: {
                 allowedFirstAuthFactors: {
                     emailOtp: true,
@@ -26,7 +26,7 @@ export class AuthStack extends cdk.NestedStack {
                 email: { required: true, mutable: true },
             },
             autoVerify: { email: true },
-            selfSignUpEnabled: true, // for prototype purposes
+            selfSignUpEnabled: true,
             accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
             mfa: cognito.Mfa.OFF,
             removalPolicy: cdk.RemovalPolicy.DESTROY,

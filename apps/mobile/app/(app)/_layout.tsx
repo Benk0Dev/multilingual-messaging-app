@@ -5,7 +5,6 @@ import useAppWebSocket from "@/src/hooks/useAppWebSocket";
 import { useUserStore } from "@/src/store/userStore";
 import { useChatStore } from "@/src/store/chatStore";
 import { markMessagesAsDelivered } from "@/src/api/messages";
-import { getMe } from "@/src/api/users";
 import { useChatSync } from "@/src/hooks/useChatSync";
 import { getChats } from "@/src/api/chats";
 
@@ -13,24 +12,11 @@ export default function AppLayout() {
     const [accessToken, setAccessToken] = useState<string | null>(null);
 
     const me = useUserStore((state) => state.me);
-    const setMe = useUserStore((state) => state.setMe);
 
     const appendChat = useChatStore((state) => state.appendChat);
     const appendMessage = useChatStore((state) => state.appendMessage);
     const setMessageReceipt = useChatStore((state) => state.setMessageReceipt);
     const setChats = useChatStore((state) => state.setChats);
-
-    // Load current user once
-    useEffect(() => {
-        (async () => {
-            try {
-                const res = await getMe();
-                setMe(res.user);
-            } catch (error) {
-                console.error('Failed to load user', error);
-            }
-        })();
-    }, [setMe]);
 
     // Load access token for WebSocket connection
     useEffect(() => {
