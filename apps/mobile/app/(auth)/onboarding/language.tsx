@@ -69,8 +69,8 @@ export default function LanguageStep() {
                 showBack={false}
             />
 
-            <View style={[styles.content, { paddingHorizontal: spacing.lg, marginTop: spacing.xs }]}>
-                <View style={{ marginBottom: spacing.sm }}>
+            <View style={[styles.content, { marginTop: spacing.xs }]}>
+                <View style={{ marginBottom: spacing.sm, paddingHorizontal: spacing.lg }}>
                     <View
                         style={[
                             styles.searchBar,
@@ -139,6 +139,7 @@ export default function LanguageStep() {
                     style={[
                         styles.footer,
                         {
+                            paddingHorizontal: spacing.lg,
                             paddingTop: spacing.md,
                             borderTopColor: colors.border,
                         },
