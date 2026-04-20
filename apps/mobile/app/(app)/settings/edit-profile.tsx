@@ -225,6 +225,7 @@ export default function EditProfile() {
 
             const { user } = await updateMe(updates);
             setMe(user);
+            setPicture({ kind: "unchanged" });
             router.back();
         } catch (e: any) {
             console.error(e);

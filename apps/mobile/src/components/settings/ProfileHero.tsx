@@ -1,14 +1,16 @@
 import React from "react";
-import { View, Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import { useTheme } from "@/src/theme";
 import { Text } from "@/src/components/ui/Text";
 import { Avatar } from "@/src/components/ui/Avatar";
+import { formatJoinedDate } from "@/src/utils/dateFormat";
 
 interface ProfileHeroProps {
     displayName: string;
     username: string;
     email?: string | null;
     pictureUrl?: string | null;
+    joinedAt?: string | null;
     userId?: string;
     onPress?: () => void;
 }
@@ -20,12 +22,14 @@ export function ProfileHero({
     username,
     email,
     pictureUrl,
+    joinedAt,
     userId,
     onPress,
 }: ProfileHeroProps) {
     const { colors, spacing } = useTheme();
 
     const subtext = email ? `@${username} · ${email}` : `@${username}`;
+    const joinedLabel = joinedAt ? `Joined ${formatJoinedDate(joinedAt)}` : null;
 
     return (
         <Pressable
@@ -63,6 +67,17 @@ export function ProfileHero({
             >
                 {subtext}
             </Text>
+            {joinedLabel && (
+                <Text
+                    variant="caption"
+                    align="center"
+                    color={colors.textTertiary}
+                    style={{ marginTop: spacing.xxs }}
+                    numberOfLines={1}
+                >
+                    {joinedLabel}
+                </Text>
+            )}
         </Pressable>
     );
 }

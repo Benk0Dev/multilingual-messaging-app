@@ -5,6 +5,7 @@ import {
     StyleSheet,
     View,
 } from "react-native";
+import { router } from "expo-router";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { getMessagesForChat, createMessageForChat } from "@/src/api/messages";
 import { useChatStore, type PendingOutgoing } from "@/src/store/chatStore";
@@ -56,7 +57,7 @@ function buildPendingMessage(
     };
 }
 
-type Peer = Omit<User, "createdAt">;
+type Peer = User;
 
 type ExistingModeProps = {
     mode: "existing";
@@ -94,7 +95,7 @@ export default function ChatScreenContent(props: Props) {
             : EMPTY_MESSAGES
     );
     const isLoaded = useChatStore((s) =>
-        activeChatId && !isCreatingChat ? s.loadedChatIds[activeChatId] ?? false : false
+        isCreatingChat ? false : activeChatId ? s.loadedChatIds[activeChatId] ?? false : true
     );
 
     // Pending outgoing messages for this chat
@@ -248,9 +249,18 @@ export default function ChatScreenContent(props: Props) {
                 avatarName={props.peer.displayName}
                 avatarImageUrl={props.peer.pictureUrl}
                 avatarUserId={props.peer.id}
-                rightIcon="ellipsis-vertical"
-                onRightPress={() => {
-                    // TODO: open chat options
+                onTitlePress={() => {
+                    router.push({
+                        pathname: "/(app)/chats/users/[userId]",
+                        params: {
+                            userId: props.peer.id,
+                            displayName: props.peer.displayName,
+                            username: props.peer.username,
+                            pictureUrl: props.peer.pictureUrl ?? undefined,
+                            preferredLang: props.peer.preferredLang,
+                            createdAt: props.peer.createdAt,
+                        },
+                    });
                 }}
             />
 

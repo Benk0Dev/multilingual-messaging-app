@@ -84,6 +84,7 @@ export default function ChatsScreen() {
         peerDisplayName: string;
         peerPictureUrl?: string;
         peerPreferredLang: string;
+        peerCreatedAt: string;
     }) {
         guardNavigation(() => router.push({
             pathname: "/chats/[chatId]",
@@ -94,6 +95,7 @@ export default function ChatsScreen() {
                 peerDisplayName: params.peerDisplayName,
                 peerPictureUrl: params.peerPictureUrl,
                 peerPreferredLang: params.peerPreferredLang,
+                peerCreatedAt: params.peerCreatedAt,
             },
         }));
     }
@@ -104,6 +106,7 @@ export default function ChatsScreen() {
         peerDisplayName: string;
         peerPictureUrl?: string;
         peerPreferredLang: string;
+        peerCreatedAt: string;
     }) {
         guardNavigation(() => router.push({
             pathname: "/chats/new",
@@ -113,6 +116,7 @@ export default function ChatsScreen() {
                 peerDisplayName: params.peerDisplayName,
                 peerPictureUrl: params.peerPictureUrl,
                 peerPreferredLang: params.peerPreferredLang,
+                peerCreatedAt: params.peerCreatedAt,
             },
         }));
     }
@@ -217,6 +221,7 @@ export default function ChatsScreen() {
                                         peerDisplayName: peer?.displayName ?? "",
                                         peerPictureUrl: peer?.pictureUrl ?? undefined,
                                         peerPreferredLang: peer?.preferredLang ?? "",
+                                        peerCreatedAt: peer?.createdAt ?? "",
                                     },
                                 }))
                             }

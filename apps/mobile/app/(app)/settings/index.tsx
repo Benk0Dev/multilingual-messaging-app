@@ -87,6 +87,7 @@ export default function SettingsScreen() {
                     username={me.username}
                     email={email}
                     pictureUrl={me.pictureUrl}
+                    joinedAt={me.createdAt}
                     userId={me.id}
                     onPress={onOpenEditProfile}
                 />

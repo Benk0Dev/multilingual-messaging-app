@@ -45,6 +45,7 @@ interface SearchOverlayProps {
         peerDisplayName: string;
         peerPictureUrl?: string;
         peerPreferredLang: string;
+        peerCreatedAt: string;
     }) => void;
     onNavigateToNewChat: (params: {
         peerId: string;
@@ -52,6 +53,7 @@ interface SearchOverlayProps {
         peerDisplayName: string;
         peerPictureUrl?: string;
         peerPreferredLang: string;
+        peerCreatedAt: string;
     }) => void;
 }
 
@@ -352,6 +354,7 @@ export function SearchOverlay({
                                                             peerDisplayName: peer.displayName,
                                                             peerPictureUrl: peer.pictureUrl ?? undefined,
                                                             peerPreferredLang: peer.preferredLang,
+                                                            peerCreatedAt: peer.createdAt,
                                                         })
                                                     }
                                                 />
@@ -387,6 +390,7 @@ export function SearchOverlay({
                                                         peerDisplayName: result.user.displayName,
                                                         peerPictureUrl: result.user.pictureUrl ?? undefined,
                                                         peerPreferredLang: result.user.preferredLang,
+                                                        peerCreatedAt: result.user.createdAt,
                                                     })
                                                 }
                                             />

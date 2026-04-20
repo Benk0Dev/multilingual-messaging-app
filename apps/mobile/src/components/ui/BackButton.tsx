@@ -41,7 +41,6 @@ export function BackButton({ onPress, disabled, style }: BackButtonProps) {
 
 const styles = StyleSheet.create({
     button: {
-        alignSelf: "flex-start",
         marginLeft: -2,
     },
 });

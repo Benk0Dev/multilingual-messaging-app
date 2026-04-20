@@ -9,15 +9,27 @@ export default function ExistingChatRoute() {
         peerDisplayName: string;
         peerPictureUrl?: string;
         peerPreferredLang: string;
+        peerCreatedAt: string;
     }>();
 
-    const { chatId, peerId, peerUsername, peerDisplayName, peerPictureUrl, peerPreferredLang } = params;
+    const {
+        chatId,
+        peerId,
+        peerUsername,
+        peerDisplayName,
+        peerPictureUrl,
+        peerPreferredLang,
+        peerCreatedAt,
+    } = params;
 
-    if (!chatId || !peerId || !peerUsername || !peerDisplayName || !peerPreferredLang) {
-        return null;
-    }
-
-    if (!chatId) {
+    if (
+        !chatId ||
+        !peerId ||
+        !peerUsername ||
+        !peerDisplayName ||
+        !peerPreferredLang ||
+        !peerCreatedAt
+    ) {
         return null;
     }
 
@@ -31,6 +43,7 @@ export default function ExistingChatRoute() {
                 displayName: peerDisplayName,
                 pictureUrl: peerPictureUrl ?? null,
                 preferredLang: peerPreferredLang,
+                createdAt: peerCreatedAt,
             }}
         />
     );

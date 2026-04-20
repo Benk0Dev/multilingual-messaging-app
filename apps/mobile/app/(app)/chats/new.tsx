@@ -9,11 +9,19 @@ export default function NewChatRoute() {
         peerDisplayName: string;
         peerPictureUrl?: string;
         peerPreferredLang: string;
+        peerCreatedAt: string;
     }>();
 
-    const { peerId, peerUsername, peerDisplayName, peerPictureUrl, peerPreferredLang } = params;
+    const {
+        peerId,
+        peerUsername,
+        peerDisplayName,
+        peerPictureUrl,
+        peerPreferredLang,
+        peerCreatedAt,
+    } = params;
 
-    if (!peerId || !peerUsername || !peerDisplayName || !peerPreferredLang) {
+    if (!peerId || !peerUsername || !peerDisplayName || !peerPreferredLang || !peerCreatedAt) {
         return null;
     }
 
@@ -26,6 +34,7 @@ export default function NewChatRoute() {
                 displayName: peerDisplayName,
                 pictureUrl: peerPictureUrl ?? null,
                 preferredLang: peerPreferredLang,
+                createdAt: peerCreatedAt,
             }}
             onSendFirstMessage={async (input) => {
                 const data = await createChatAndSendFirstMessage({

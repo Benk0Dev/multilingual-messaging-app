@@ -43,3 +43,14 @@ export function formatChatDatePill(date: Date): string {
     if (diff > 0 && diff < 7) return formatWeekday(date);
     return formatCalendarDate(date);
 }
+
+// "Joined" date on profiles: e.g. "20 Apr 2026"
+export function formatJoinedDate(iso: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+    });
+}

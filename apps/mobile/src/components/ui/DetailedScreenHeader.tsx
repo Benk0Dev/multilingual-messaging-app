@@ -51,34 +51,39 @@ export function DetailedScreenHeader({
                     <BackButton />
                 )}
 
-                {avatarName && (
-                    <Avatar
-                        name={avatarName}
-                        size={avatarSizes.md}
-                        imageUrl={avatarImageUrl}
-                        userId={avatarUserId}
-                    />
-                )}
-
                 <Pressable
                     onPress={onTitlePress}
                     disabled={!onTitlePress}
-                    style={styles.titleBlock}
+                    style={({ pressed }) => [
+                        styles.titleArea,
+                        { opacity: pressed && onTitlePress ? 0.7 : 1 },
+                    ]}
                 >
-                    <Text
-                        variant="bodyBold"
-                        numberOfLines={1}
-                    >
-                        {title}
-                    </Text>
-                    {subtitle && (
-                        <Text
-                            variant="caption"
-                            color={colors.secondary}
-                        >
-                            {subtitle}
-                        </Text>
+                    {avatarName && (
+                        <Avatar
+                            name={avatarName}
+                            size={avatarSizes.md}
+                            imageUrl={avatarImageUrl}
+                            userId={avatarUserId}
+                        />
                     )}
+
+                    <View style={styles.titleBlock}>
+                        <Text
+                            variant="bodyBold"
+                            numberOfLines={1}
+                        >
+                            {title}
+                        </Text>
+                        {subtitle && (
+                            <Text
+                                variant="caption"
+                                color={colors.secondary}
+                            >
+                                {subtitle}
+                            </Text>
+                        )}
+                    </View>
                 </Pressable>
 
                 {rightIcon && onRightPress ? (
@@ -108,6 +113,12 @@ const styles = StyleSheet.create({
         borderBottomWidth: 0.5,
     },
     row: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+    },
+    titleArea: {
+        flex: 1,
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
