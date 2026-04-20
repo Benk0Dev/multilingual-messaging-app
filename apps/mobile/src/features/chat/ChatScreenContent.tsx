@@ -238,6 +238,8 @@ export default function ChatScreenContent(props: Props) {
         }
     }
 
+    if (!me) return null;
+
     return (
         <View style={styles.container}>
             <ScreenHeader
@@ -289,9 +291,15 @@ export default function ChatScreenContent(props: Props) {
                     keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
                     ListEmptyComponent={
                         <View style={styles.emptyState}>
-                            <Text variant="secondary" color={colors.textTertiary}>
-                                No messages yet
-                            </Text>
+                            {isLoaded ? (
+                                <Text variant="secondary" color={colors.textTertiary}>
+                                    No messages yet
+                                </Text>
+                            ) : (
+                                <Text variant="secondary" color={colors.textTertiary}>
+                                    Loading messages…
+                                </Text>
+                            )}
                         </View>
                     }
                     renderItem={({ item }) => {
