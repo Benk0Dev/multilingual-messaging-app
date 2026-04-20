@@ -10,8 +10,6 @@ export default function ChatsLayout() {
                 headerShown: false,
                 contentStyle: { backgroundColor: colors.bg },
             }}
-        >
-            <Stack.Screen name="index" options={{ title: "Chats" }} />
-        </Stack>
+        />
     );
 }

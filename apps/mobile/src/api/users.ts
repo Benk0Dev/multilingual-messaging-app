@@ -24,6 +24,18 @@ export async function getMe() {
     });
 }
 
+export async function updateMe(params: {
+    username?: string;
+    displayName?: string;
+    preferredLang?: string;
+    pictureUrl?: string | null;
+}) {
+    return api<{ user: User }>(`/api/users/me`, {
+        method: "PATCH",
+        body: JSON.stringify(params),
+    });
+}
+
 export async function checkUsernameAvailable(username: string) {
     const query = new URLSearchParams({ username });
     return api<{ available: boolean }>(`/api/users/username-available?${query.toString()}`, {

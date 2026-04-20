@@ -79,6 +79,56 @@ export async function findUser(input: {
     };
 }
 
+export async function updateUser(input: {
+    id: string;
+    username?: string;
+    displayName?: string;
+    preferredLang?: string;
+    pictureUrl?: string | null;
+}): Promise<User> {
+    const data: {
+        username?: string;
+        displayName?: string;
+        preferredLang?: string;
+        pictureUrl?: string | null;
+    } = {};
+
+    if (input.username !== undefined) data.username = input.username;
+    if (input.displayName !== undefined) data.displayName = input.displayName;
+    if (input.preferredLang !== undefined) data.preferredLang = input.preferredLang;
+    if (input.pictureUrl !== undefined) data.pictureUrl = input.pictureUrl;
+
+    if (Object.keys(data).length === 0) {
+        throw new Error("no_changes");
+    }
+
+    try {
+        const user = await prisma.user.update({
+            where: { id: input.id },
+            data,
+            select: {
+                id: true,
+                username: true,
+                displayName: true,
+                preferredLang: true,
+                pictureUrl: true,
+                createdAt: true,
+            },
+        });
+
+        return {
+            ...user,
+            id: user.id.toString(),
+            createdAt: user.createdAt.toISOString(),
+        };
+    } catch (err) {
+        if (isUniqueConstraintError(err)) {
+            throw new Error("username_taken");
+        }
+        throw err;
+    }
+}
+
 export async function isUsernameAvailable(input: {
     username: string;
 }): Promise<boolean> {

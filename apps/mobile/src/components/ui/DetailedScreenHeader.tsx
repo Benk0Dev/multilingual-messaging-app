@@ -17,6 +17,7 @@ interface DetailedScreenHeaderProps {
     rightIcon?: keyof typeof Ionicons.glyphMap;
     onRightPress?: () => void;
     onTitlePress?: () => void;
+    transparent?: boolean;
 }
 
 export function DetailedScreenHeader({
@@ -29,6 +30,7 @@ export function DetailedScreenHeader({
     rightIcon,
     onRightPress,
     onTitlePress,
+    transparent = false,
 }: DetailedScreenHeaderProps) {
     const { colors, spacing, avatarSizes } = useTheme();
     const insets = useSafeAreaInsets();
@@ -39,8 +41,8 @@ export function DetailedScreenHeader({
                 styles.container,
                 {
                     paddingTop: insets.top + spacing.sm,
-                    backgroundColor: colors.headerBg,
-                    borderBottomColor: colors.border,
+                    backgroundColor: transparent ? "transparent" : colors.headerBg,
+                    borderBottomColor: transparent ? "transparent" : colors.border,
                 },
             ]}
         >

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { validate } from "../middleware/validate";
 import {
     createUserBodySchema,
+    updateUserBodySchema,
     searchUsersQuerySchema,
     usernameAvailableQuerySchema,
     profilePictureUploadUrlQuerySchema,
@@ -9,6 +10,7 @@ import {
 import {
     createUser,
     getMe,
+    updateMe,
     searchUsers,
     checkUsernameAvailable,
     getProfilePictureUploadUrl,
@@ -25,6 +27,12 @@ router.post(
 router.get(
     "/me",
     getMe
+);
+router.patch(
+    "/me",
+    requireOnboarded,
+    validate(updateUserBodySchema, "body"),
+    updateMe
 );
 router.get(
     "/username-available",

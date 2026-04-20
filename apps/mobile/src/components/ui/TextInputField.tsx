@@ -34,6 +34,8 @@ export const TextInputField = forwardRef<TextInput, TextInputFieldProps>(
                         color={colors.textSecondary}
                         style={{
                             marginBottom: spacing.xs,
+                            paddingHorizontal: spacing.md,
+                            textTransform: "uppercase",
                         }}
                     >
                         {label}

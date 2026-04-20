@@ -55,7 +55,7 @@ export function Avatar({ name, size = 48, imageUrl, userId }: AvatarProps) {
             <Text
                 variant="body"
                 color="#FFFFFF"
-                style={{ fontSize, fontWeight: '700', letterSpacing: 0.5 }}
+                style={{ fontSize, fontWeight: '700', letterSpacing: 0.5, lineHeight: fontSize * 1.2 }}
             >
                 {initial}
             </Text>

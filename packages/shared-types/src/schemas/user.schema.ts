@@ -14,6 +14,13 @@ export const createUserBodySchema = z.object({
     pictureUrl: z.string().url().optional(),
 });
 
+export const updateUserBodySchema = z.object({
+    username: usernameSchema.optional(),
+    displayName: z.string().min(1).max(255).optional(),
+    preferredLang: z.nativeEnum(LanguageCode).optional(),
+    pictureUrl: z.string().url().nullable().optional(),
+});
+
 export const searchUsersQuerySchema = z.object({
     q: z.string().min(1).max(255),
     limit: z
@@ -33,6 +40,7 @@ export const profilePictureUploadUrlQuerySchema = z.object({
 });
  
 export type CreateUserBody = z.infer<typeof createUserBodySchema>;
+export type UpdateUserBody = z.infer<typeof updateUserBodySchema>;
 export type SearchUsersQuery = z.infer<typeof searchUsersQuerySchema>;
 export type UsernameAvailableQuery = z.infer<typeof usernameAvailableQuerySchema>;
 export type ProfilePictureUploadUrlQuery = z.infer<typeof profilePictureUploadUrlQuerySchema>;

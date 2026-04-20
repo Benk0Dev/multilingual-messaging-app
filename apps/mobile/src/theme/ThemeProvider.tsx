@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 import { lightTheme, darkTheme, type AppTheme } from './theme';
+import { useThemeStore } from '../store/themeStore';
 
 const ThemeContext = createContext<AppTheme>(lightTheme);
 
@@ -11,11 +12,20 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children, forcedTheme }: ThemeProviderProps) {
     const systemScheme = useColorScheme();
+    const mode = useThemeStore((s) => s.mode);
+    const hydrate = useThemeStore((s) => s.hydrate);
+
+    useEffect(() => {
+        hydrate();
+    }, [hydrate]);
 
     const theme = useMemo(() => {
-        const scheme = forcedTheme ?? systemScheme ?? 'light';
-        return scheme === 'dark' ? darkTheme : lightTheme;
-    }, [forcedTheme, systemScheme]);
+        if (forcedTheme) {
+            return forcedTheme === 'dark' ? darkTheme : lightTheme;
+        }
+        const effective = mode === 'system' ? (systemScheme ?? 'light') : mode;
+        return effective === 'dark' ? darkTheme : lightTheme;
+    }, [forcedTheme, mode, systemScheme]);
 
     return (
         <ThemeContext.Provider value={theme}>

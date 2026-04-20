@@ -23,7 +23,7 @@ export function OnboardingScreen({ children, keyboardOffset, style }: Onboarding
 
     return (
         <KeyboardAvoidingView
-            style={{ flex: 1, backgroundColor: colors.bg }}
+            style={styles.container}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             keyboardVerticalOffset={keyboardOffset ?? -insets.bottom}
         >
