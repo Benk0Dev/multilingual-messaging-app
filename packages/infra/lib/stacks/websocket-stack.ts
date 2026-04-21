@@ -21,6 +21,7 @@ export class WebSocketStack extends cdk.NestedStack {
     public readonly webSocketApi: apigwv2.WebSocketApi;
     public readonly webSocketStage: apigwv2.WebSocketStage;
     public readonly webSocketApiEndpoint: string;
+    public readonly webSocketHttpApiEndpoint: string;
 
     constructor(scope: Construct, id: string, props: WebSocketStackProps) {
         super(scope, id, props);
@@ -84,9 +85,14 @@ export class WebSocketStack extends cdk.NestedStack {
         });
 
         this.webSocketApiEndpoint = this.webSocketStage.url;
+        this.webSocketHttpApiEndpoint = this.webSocketStage.callbackUrl;
 
         new cdk.CfnOutput(this, "WebSocketUrl", {
             value: this.webSocketApiEndpoint,
+        });
+
+        new cdk.CfnOutput(this, "WebSocketHttpUrl", {
+            value: this.webSocketHttpApiEndpoint,
         });
 
         new cdk.CfnOutput(this, "WebSocketApiId", {

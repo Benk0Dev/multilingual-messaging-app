@@ -1,0 +1,33 @@
+# Dependencies (will be installed fresh inside the container)
+**/node_modules
+
+# Build outputs (will be rebuilt inside the container)
+**/dist
+**/build
+**/*.tsbuildinfo
+packages/db/generated
+
+# CDK
+**/cdk.out
+**/.cdk.staging
+
+# Secrets and local config
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Mobile app — not needed for API image, but keep package.json so npm ci can resolve the full workspace graph
+apps/mobile/*
+!apps/mobile/package.json
+
+# Logs
+**/*.log
+
+# IDE / OS cruft
+**/.DS_Store
+**/.vscode
+**/.idea
+
+# Git
+.git
+.gitignore

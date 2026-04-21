@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
+    "dev": "cp src/config.dev.ts src/config.ts && expo start",
+    "prod": "cp src/config.prod.ts src/config.ts && expo start --no-dev --minify",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",

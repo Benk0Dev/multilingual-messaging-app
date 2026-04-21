@@ -42,5 +42,6 @@ app-example
 /ios
 /android
 
-# temporary
+# Active config, selected by npm run dev/prod scripts
 /src/config.ts
+/src/config.*.ts

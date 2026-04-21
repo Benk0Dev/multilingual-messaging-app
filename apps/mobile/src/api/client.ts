@@ -1,4 +1,4 @@
-import { BASE_URL } from "../config"; // Temporary
+import { BASE_URL } from "../config";
 import { clearSession, getValidAccessToken, refreshSession } from "../auth/session";
 
 
