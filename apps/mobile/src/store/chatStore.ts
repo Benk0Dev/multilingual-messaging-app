@@ -18,6 +18,9 @@ type ChatStore = {
     // Optimistic outgoing messages keyed by chat id
     pendingOutgoingByChatId: Record<string, PendingOutgoing[]>;
 
+    // True if there might be older messages on the server that we haven't fetched yet
+    hasMoreOlderByChat: Record<string, boolean>;
+
     setChats: (chats: Chat[]) => void;
     appendChat: (chatId: string, chat: Chat) => void;
 
@@ -33,6 +36,8 @@ type ChatStore = {
 
     addPendingOutgoing: (chatId: string, pending: PendingOutgoing) => void;
     removePendingOutgoing: (chatId: string, clientId: string) => void;
+
+    setHasMoreOlder: (chatId: string, hasMore: boolean) => void;
 
     clearChat: (chatId: string) => void;
     clearAll: () => void;
@@ -222,6 +227,7 @@ export const useChatStore = create<ChatStore>((set) => ({
     chats: [],
     pendingReceiptsByMessageId: {},
     pendingOutgoingByChatId: {},
+    hasMoreOlderByChat: {},
 
     setChats: (chats) =>
         set(() => ({
@@ -397,20 +403,31 @@ export const useChatStore = create<ChatStore>((set) => ({
             };
         }),
 
+    setHasMoreOlder: (chatId, hasMore) =>
+        set((state) => ({
+            hasMoreOlderByChat: {
+                ...state.hasMoreOlderByChat,
+                [chatId]: hasMore,
+            },
+        })),
+
     clearChat: (chatId) =>
         set((state) => {
             const nextMessages = { ...state.messagesByChatId };
             const nextLoaded = { ...state.loadedChatIds };
             const nextPendingOutgoing = { ...state.pendingOutgoingByChatId };
+            const nextHasMoreOlder = { ...state.hasMoreOlderByChat };
 
             delete nextMessages[chatId];
             delete nextLoaded[chatId];
             delete nextPendingOutgoing[chatId];
+            delete nextHasMoreOlder[chatId];
 
             return {
                 messagesByChatId: nextMessages,
                 loadedChatIds: nextLoaded,
                 pendingOutgoingByChatId: nextPendingOutgoing,
+                hasMoreOlderByChat: nextHasMoreOlder,
                 chats: state.chats,
             };
         }),
@@ -422,5 +439,6 @@ export const useChatStore = create<ChatStore>((set) => ({
             chats: [],
             pendingReceiptsByMessageId: {},
             pendingOutgoingByChatId: {},
+            hasMoreOlderByChat: {},
         }),
 }));

@@ -4,6 +4,7 @@ import { getChats } from "@/src/api/chats";
 import { getMessagesForChat, markAllMessagesAsDelivered } from "@/src/api/messages";
 import { useChatStore } from "@/src/store/chatStore";
 import type { Message } from "@app/shared-types/models";
+import { PAGE_SIZE } from "@/src/constants/pagination";
 
 function getLatestCreatedAt(messages: Message[] | undefined): string | null {
     if (!messages || messages.length === 0) return null;
@@ -55,7 +56,7 @@ export function useChatSync(trigger: boolean | number, enabled: boolean) {
                         const missed = await getMessagesForChat({
                             chatId,
                             ...(since ? { since } : {}),
-                            limit: 999, // TODO: pagination
+                            limit: PAGE_SIZE,
                         });
                         if (missed.length > 0) {
                             mergeMessagesForChat(chatId, missed);

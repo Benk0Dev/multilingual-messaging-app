@@ -15,6 +15,7 @@ export const getMessagesQuerySchema = z.object({
         .optional()
         .default(20),
     since: z.coerce.date().optional(),
+    before: z.coerce.date().optional(),
 });
 
 export const updateMessageReceiptBodySchema = z.object({

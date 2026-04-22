@@ -5,6 +5,7 @@ export async function getMessagesForChat(params: {
     chatId: string;
     limit?: number;
     since?: string;
+    before?: string;
 }): Promise<Message[]> {
     const query = new URLSearchParams();
     if (params.limit) {
@@ -12,6 +13,9 @@ export async function getMessagesForChat(params: {
     }
     if (params.since) {
         query.set("since", params.since);
+    }
+    if (params.before) {
+        query.set("before", params.before);
     }
     const url = `/api/chats/${params.chatId}/messages?${query.toString()}`;
     const data = await api<{ messages: Message[] }>(url, {

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     Platform,
     StyleSheet,
@@ -29,6 +30,7 @@ import { DatePill } from "@/src/components/chat/DatePill";
 import { formatChatDatePill } from "@/src/utils/dateFormat";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMarkMessagesAsRead } from "@/src/hooks/useMarkMessagesAsRead";
+import { PAGE_SIZE } from "@/src/constants/pagination";
 
 const EMPTY_MESSAGES: Message[] = [];
 const EMPTY_PENDING: PendingOutgoing[] = [];
@@ -86,6 +88,7 @@ export default function ChatScreenContent(props: Props) {
     );
     const [text, setText] = useState("");
     const [isCreatingChat, setIsCreatingChat] = useState(false);
+    const [loadingOlder, setLoadingOlder] = useState(false);
 
     const isLiveChat = Boolean(activeChatId) && !isCreatingChat;
 
@@ -97,6 +100,11 @@ export default function ChatScreenContent(props: Props) {
     const isLoaded = useChatStore((s) =>
         isCreatingChat ? false : activeChatId ? s.loadedChatIds[activeChatId] ?? false : true
     );
+    const hasMoreOlder = useChatStore((s) =>
+        activeChatId && !isCreatingChat
+            ? s.hasMoreOlderByChat[activeChatId] ?? true
+            : false
+    );
 
     // Pending outgoing messages for this chat
     const pendingChatKey = activeChatId ?? "__draft__";
@@ -106,28 +114,31 @@ export default function ChatScreenContent(props: Props) {
 
     const appendChat = useChatStore((s) => s.appendChat);
     const setMessagesForChat = useChatStore((s) => s.setMessagesForChat);
+    const mergeMessagesForChat = useChatStore((s) => s.mergeMessagesForChat);
     const appendMessage = useChatStore((s) => s.appendMessage);
     const setMessageReceipt = useChatStore((s) => s.setMessageReceipt);
     const addPendingOutgoing = useChatStore((s) => s.addPendingOutgoing);
     const removePendingOutgoing = useChatStore((s) => s.removePendingOutgoing);
+    const setHasMoreOlder = useChatStore((s) => s.setHasMoreOlder);
 
     const me = useUserStore((state) => state.me);
 
-    // Load messages for the chat
+    // Initial load - the most recent page of messages for this chat
     useEffect(() => {
         (async () => {
             if (!activeChatId || isCreatingChat || isLoaded) return;
             try {
                 const items = await getMessagesForChat({
                     chatId: activeChatId,
-                    limit: 999, // TODO: pagination
+                    limit: PAGE_SIZE,
                 });
                 setMessagesForChat(activeChatId, items);
+                setHasMoreOlder(activeChatId, items.length === PAGE_SIZE);
             } catch (e) {
                 console.error(e);
             }
         })();
-    }, [activeChatId, isCreatingChat, isLoaded, setMessagesForChat]);
+    }, [activeChatId, isCreatingChat, isLoaded, setMessagesForChat, setHasMoreOlder]);
 
     // Compare pending outgoing messages with the real messages every time messages changes
     // If a real message has arrived that matches a pending entry, clear the pending entry
@@ -152,6 +163,40 @@ export default function ChatScreenContent(props: Props) {
             setMessageReceipt(messageId, me.id, { readAt });
         },
     });
+
+    // Fetch the next page of older messages
+    const loadOlder = useCallback(async () => {
+        if (!activeChatId || isCreatingChat) return;
+        if (loadingOlder || !hasMoreOlder) return;
+
+        const oldest = messages[0];
+        if (!oldest) return;
+
+        setLoadingOlder(true);
+        try {
+            const older = await getMessagesForChat({
+                chatId: activeChatId,
+                before: oldest.createdAt,
+                limit: PAGE_SIZE,
+            });
+            if (older.length > 0) {
+                mergeMessagesForChat(activeChatId, older);
+            }
+            setHasMoreOlder(activeChatId, older.length === PAGE_SIZE);
+        } catch (e) {
+            console.error("Failed to load older messages", e);
+        } finally {
+            setLoadingOlder(false);
+        }
+    }, [
+        activeChatId,
+        isCreatingChat,
+        loadingOlder,
+        hasMoreOlder,
+        messages,
+        mergeMessagesForChat,
+        setHasMoreOlder,
+    ]);
 
     // Build the list data for the chat
     const listData = useMemo(() => {
@@ -299,6 +344,15 @@ export default function ChatScreenContent(props: Props) {
                     inverted
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+                    onEndReached={loadOlder}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={
+                        loadingOlder ? (
+                            <View style={styles.loadingOlder}>
+                                <ActivityIndicator size="small" color={colors.primary} />
+                            </View>
+                        ) : null
+                    }
                     ListEmptyComponent={
                         <View style={styles.emptyState}>
                             {isLoaded ? (
@@ -377,6 +431,10 @@ const styles = StyleSheet.create({
     },
     messageListContent: {
         paddingTop: 10,
+    },
+    loadingOlder: {
+        paddingVertical: 16,
+        alignItems: "center",
     },
     emptyState: {
         flex: 1,

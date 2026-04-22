@@ -299,6 +299,7 @@ export async function getMessagesForChat(input: {
     chatId: string,
     limit: number,
     since?: Date,
+    before?: Date,
 }): Promise<{ messages: Message[] }> {
     const user = await prisma.user.findUnique({
         where: {
@@ -329,12 +330,13 @@ export async function getMessagesForChat(input: {
     const messages = await prisma.message.findMany({
         where: {
             chatId: input.chatId,
-            createdAt: input.since ? {
-                gte: input.since,
+            createdAt: (input.since || input.before) ? {
+                ...(input.since ? { gte: input.since } : {}),
+                ...(input.before ? { lt: input.before } : {}),
             } : undefined,
         },
         orderBy: {
-            createdAt: "asc",
+            createdAt: "desc",
         },
         select: {
             id: true,
@@ -388,6 +390,8 @@ export async function getMessagesForChat(input: {
         },
         take: input.limit,
     });
+
+    messages.reverse();
 
     const missingContentIds = messages
     .filter((message) =>
