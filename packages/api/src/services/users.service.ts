@@ -290,6 +290,13 @@ export async function searchUsers(input: {
 
     for (const match of existingChatMatches) {
         const lastMsg = match.chat.messages[0];
+        if (lastMsg && lastMsg.sender.id === input.currentUserId) {
+            lastMsg.content.translations = [];
+        }
+    }
+
+    for (const match of existingChatMatches) {
+        const lastMsg = match.chat.messages[0];
         const lastMessage = lastMsg ? {
             ...lastMsg,
             id: lastMsg.id.toString(),

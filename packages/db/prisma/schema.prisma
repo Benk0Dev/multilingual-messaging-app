@@ -85,6 +85,7 @@ model MessageTranslation {
   content              MessageContent @relation(fields: [contentId], references: [id])
 
   @@id([contentId, targetLang])
+  @@unique([contentId, targetLang])
   @@index([contentId])
   @@map("message_translations")
 }

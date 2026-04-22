@@ -1,9 +1,99 @@
 import { prisma } from "@app/db";
 import { Message, MessageReceiptUpdate } from "@app/shared-types/models";
-import { encrypt } from "../services/crypto.service";
 import { sendToUser } from "./realtime.service";
 import { translateText } from "./translate.service";
+import { encrypt, decrypt } from "./crypto.service";
 import { decryptContent } from "../utils/messageContent";
+
+// Backfills missing translations
+export async function ensureTranslations(input: {
+    contentIds: string[];
+    targetLang: string;
+}): Promise<Map<string, {
+    targetLang: string;
+    translatedTextCipher: Uint8Array<ArrayBuffer>;
+    translatedTextNonce: Uint8Array<ArrayBuffer>;
+}>> {
+    if (input.contentIds.length === 0) {
+        return new Map();
+    }
+
+    const contents = await prisma.messageContent.findMany({
+        where: {
+            id: {
+                in: input.contentIds,
+            },
+            originalLang: {
+                not: input.targetLang,
+            },
+            translations: {
+                none: {
+                    targetLang: input.targetLang,
+                },
+            },
+        },
+        select: {
+            id: true,
+            textCipher: true,
+            textNonce: true,
+            originalLang: true,
+        },
+    });
+
+    if (contents.length === 0) {
+        return new Map();
+    }
+
+    const settled = await Promise.allSettled(contents.map(async (content) => {
+        const plaintext = decrypt(content.textCipher, content.textNonce);
+        const translatedText = await translateText(plaintext, content.originalLang, input.targetLang);
+        const { cipher, nonce } = encrypt(translatedText);
+        return {
+            contentId: content.id,
+            targetLang: input.targetLang,
+            translatedTextCipher: cipher,
+            translatedTextNonce: nonce,
+        };
+    }));
+
+    const created: {
+        contentId: string;
+        targetLang: string;
+        translatedTextCipher: Uint8Array<ArrayBuffer>;
+        translatedTextNonce: Uint8Array<ArrayBuffer>;
+    }[] = [];
+
+    for (const result of settled) {
+        if (result.status === "fulfilled") {
+            created.push(result.value);
+        } else {
+            console.error("ensureTranslations: translation failed for one message", result.reason);
+        }
+    }
+
+    if (created.length === 0) {
+        return new Map();
+    }
+
+    await prisma.messageTranslation.createMany({
+        data: created,
+        skipDuplicates: true,
+    });
+
+    const byContentId = new Map<string, {
+        targetLang: string;
+        translatedTextCipher: Uint8Array<ArrayBuffer>;
+        translatedTextNonce: Uint8Array<ArrayBuffer>;
+    }>();
+    for (const t of created) {
+        byContentId.set(t.contentId, {
+            targetLang: t.targetLang,
+            translatedTextCipher: t.translatedTextCipher,
+            translatedTextNonce: t.translatedTextNonce,
+        });
+    }
+    return byContentId;
+}
 
 export async function createMessageForChat(input: {
     chatId: string,
@@ -299,6 +389,33 @@ export async function getMessagesForChat(input: {
         take: input.limit,
     });
 
+    const missingContentIds = messages
+    .filter((message) =>
+        message.sender.id !== input.userId &&
+        message.content.originalLang !== userLang &&
+        message.content.translations.length === 0
+    )
+    .map((message) => message.content.id);
+
+    if (missingContentIds.length > 0) {
+        const created = await ensureTranslations({
+            contentIds: missingContentIds,
+            targetLang: userLang,
+        });
+        for (const message of messages) {
+            const newTranslation = created.get(message.content.id);
+            if (newTranslation) {
+                message.content.translations.push(newTranslation);
+            }
+        }
+    }
+
+    for (const message of messages) {
+        if (message.sender.id === input.userId) {
+            message.content.translations = [];
+        }
+    }
+
     return {
         messages: messages.map((message) => ({
             ...message,
@@ -320,7 +437,7 @@ export async function getMessagesForChat(input: {
             createdAt: message.createdAt.toISOString(),
             updatedAt: message.updatedAt.toISOString(),
         })),
-    }
+    };
 }
 
 export async function markMessagesAsDeliveredOrRead(input: {

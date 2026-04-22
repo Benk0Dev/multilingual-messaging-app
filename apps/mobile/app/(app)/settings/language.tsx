@@ -10,6 +10,8 @@ import { Divider } from "@/src/components/ui/Divider";
 import { DetailedScreenHeader as ScreenHeader } from "@/src/components/ui/DetailedScreenHeader";
 import { useUserStore } from "@/src/store/userStore";
 import { updateMe } from "@/src/api/users";
+import { useChatStore } from "@/src/store/chatStore";
+import { getChats } from "@/src/api/chats";
 
 type LanguageOption = {
     code: LanguageCode;
@@ -26,6 +28,8 @@ export default function LanguageSettings() {
     const inputTheme = useInputTheme();
     const me = useUserStore((s) => s.me);
     const setMe = useUserStore((s) => s.setMe);
+    const clearAll = useChatStore((s) => s.clearAll);
+    const setChats = useChatStore((s) => s.setChats);
     const [query, setQuery] = useState("");
     const [savingCode, setSavingCode] = useState<LanguageCode | null>(null);
     const [errorCode, setErrorCode] = useState<LanguageCode | null>(null);
@@ -52,6 +56,9 @@ export default function LanguageSettings() {
         try {
             const { user } = await updateMe({ preferredLang: code });
             setMe(user);
+            clearAll();
+            const chats = await getChats();
+            setChats(chats);
         } catch (e) {
             console.error(e);
             setErrorCode(code);

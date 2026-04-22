@@ -1,6 +1,7 @@
 import { prisma } from "@app/db";
 import { Chat } from "@app/shared-types/models";
 import { sendToUsers } from "./realtime.service";
+import { ensureTranslations } from "./messages.service";
 import { decryptContent } from "../utils/messageContent";
 
 export async function findOrCreateChat(input: { userIds: string[] }): Promise<Chat> {
@@ -206,6 +207,43 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
             },
         },
     });
+
+    // Backfill missing translations on last-message previews to handle user switching languages
+    const missingContentIds: string[] = [];
+    for (const chat of chats) {
+        const lastMsg = chat.messages[0];
+        if (
+            lastMsg &&
+            lastMsg.sender.id !== userId &&
+            lastMsg.content.originalLang !== userLang &&
+            lastMsg.content.translations.length === 0
+        ) {
+            missingContentIds.push(lastMsg.content.id);
+        }
+    }
+
+    if (missingContentIds.length > 0) {
+        const created = await ensureTranslations({
+            contentIds: missingContentIds,
+            targetLang: userLang,
+        });
+        for (const chat of chats) {
+            const content = chat.messages[0]?.content;
+            if (content) {
+                const newTranslation = created.get(content.id);
+                if (newTranslation) {
+                    content.translations.push(newTranslation);
+                }
+            }
+        }
+    }
+
+    for (const chat of chats) {
+        const lastMsg = chat.messages[0];
+        if (lastMsg && lastMsg.sender.id === userId) {
+            lastMsg.content.translations = [];
+        }
+    }
 
     return chats.map((chat) => ({
         id: chat.id.toString(),
