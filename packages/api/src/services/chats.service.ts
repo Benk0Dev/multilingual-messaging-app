@@ -1,11 +1,12 @@
 import { prisma } from "@app/db";
 import { Chat } from "@app/shared-types/models";
 import { sendToUsers } from "./realtime.service";
+import { decryptContent } from "../utils/messageContent";
 
 export async function findOrCreateChat(input: { userIds: string[] }): Promise<Chat> {
     // remove duplicates
     const uniqueUserIds = [...new Set(input.userIds)];
-    
+
     const chat = await prisma.chat.findFirst({
         where: {
             AND: [
@@ -61,7 +62,7 @@ export async function findOrCreateChat(input: { userIds: string[] }): Promise<Ch
             })),
         };
     }
-    
+
     const validUsers = await prisma.user.findMany({
         where: {
             id: {
@@ -125,13 +126,18 @@ export async function findOrCreateChat(input: { userIds: string[] }): Promise<Ch
 }
 
 export async function getChatsForUser(userId: string): Promise<Chat[]> {
-    const userLang = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { preferredLang: true },
+    const me = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+        select: {
+            preferredLang: true,
+        },
     });
-    if (!userLang) {
+    if (!me) {
         throw new Error("user_not_found");
     }
+    const userLang = me.preferredLang;
 
     const chats = await prisma.chat.findMany({
         where: {
@@ -168,13 +174,17 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
                     content: {
                         select: {
                             id: true,
-                            text: true,
+                            textCipher: true,
+                            textNonce: true,
                             originalLang: true,
                             translations: {
+                                where: {
+                                    targetLang: userLang,
+                                },
                                 select: {
-                                    contentId: true,
                                     targetLang: true,
-                                    translatedText: true,
+                                    translatedTextCipher: true,
+                                    translatedTextNonce: true,
                                 },
                             },
                         },
@@ -197,32 +207,13 @@ export async function getChatsForUser(userId: string): Promise<Chat[]> {
         },
     });
 
-    const translationsMap = new Map<string, {
-        targetLang: string;
-        translatedText: string;
-    }>();
-
-    chats.forEach((chat) => {
-        chat.messages[0]?.content.translations.forEach((translation) => {
-            translationsMap.set(translation.contentId, {
-                targetLang: translation.targetLang,
-                translatedText: translation.translatedText,
-            });
-        });
-    });
-
     return chats.map((chat) => ({
-        ...chat,
         id: chat.id.toString(),
         createdAt: chat.createdAt.toISOString(),
         lastMessage: chat.messages[0] ? {
             ...chat.messages[0],
             id: chat.messages[0].id.toString(),
-            content: {
-                ...chat.messages[0].content,
-                id: chat.messages[0].content.id.toString(),
-                translation: translationsMap.get(chat.messages[0].content.id),
-            },
+            content: decryptContent(chat.messages[0].content),
             sender: {
                 ...chat.messages[0].sender,
                 id: chat.messages[0].sender.id.toString(),

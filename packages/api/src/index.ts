@@ -1,8 +1,10 @@
 import "dotenv/config";
 import { loadConfig } from "./config.js";
+import { initCrypto } from "./services/crypto.service.js";
 
 async function main() {
     await loadConfig();
+    initCrypto();
 
     const express = require("express");
     const routes = require("./routes").default;

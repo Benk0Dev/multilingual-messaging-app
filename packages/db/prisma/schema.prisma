@@ -64,7 +64,9 @@ model Message {
 model MessageContent {
   id           String               @id @default(uuid()) @map("id") @db.Uuid
   originalLang String               @map("original_lang")
-  text         String               @map("text")
+  textCipher   Bytes                @map("text_cipher")
+  textNonce    Bytes                @map("text_nonce")
+  encScheme    String               @default("v1") @map("enc_scheme")
   createdAt    DateTime             @default(now()) @map("created_at")
   updatedAt    DateTime             @updatedAt @map("updated_at")
   translations MessageTranslation[]
@@ -74,12 +76,13 @@ model MessageContent {
 }
 
 model MessageTranslation {
-  contentId      String         @map("content_id") @db.Uuid
-  targetLang     String         @map("target_lang")
-  translatedText String         @map("translated_text")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
-  content        MessageContent @relation(fields: [contentId], references: [id])
+  contentId            String         @map("content_id") @db.Uuid
+  targetLang           String         @map("target_lang")
+  translatedTextCipher Bytes          @map("translated_text_cipher")
+  translatedTextNonce  Bytes          @map("translated_text_nonce")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+  content              MessageContent @relation(fields: [contentId], references: [id])
 
   @@id([contentId, targetLang])
   @@index([contentId])

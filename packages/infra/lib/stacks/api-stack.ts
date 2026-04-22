@@ -20,6 +20,7 @@ export type ApiStackProps = cdk.NestedStackProps & {
         websocketConnectionsTable: string;
     };
     appSecret: secretsmanager.ISecret;
+    messageEncryptionSecret: secretsmanager.ISecret;
     userPool: cognito.IUserPool;
     userPoolClient: cognito.IUserPoolClient;
     connectionsTable: dynamodb.ITable;
@@ -48,6 +49,7 @@ export class ApiStack extends cdk.NestedStack {
             environment: {
                 NODE_ENV: "production",
                 APP_SECRET_ARN: props.appSecret.secretArn,
+                MESSAGE_ENCRYPTION_SECRET_ARN: props.messageEncryptionSecret.secretArn,
                 COGNITO_USER_POOL_ID: props.env.cognitoUserPoolId,
                 COGNITO_USER_POOL_CLIENT_ID: props.env.cognitoClientId,
                 S3_BUCKET: props.env.s3Bucket,
@@ -57,6 +59,7 @@ export class ApiStack extends cdk.NestedStack {
         });
 
         props.appSecret.grantRead(this.apiFn);
+        props.messageEncryptionSecret.grantRead(this.apiFn);
         props.connectionsTable.grantReadWriteData(this.apiFn);
         props.bucket.grantReadWrite(this.apiFn);
 

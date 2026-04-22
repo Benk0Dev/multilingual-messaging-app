@@ -1,12 +1,14 @@
 import { prisma } from "@app/db";
 import { Message, MessageReceiptUpdate } from "@app/shared-types/models";
+import { encrypt } from "../services/crypto.service";
 import { sendToUser } from "./realtime.service";
 import { translateText } from "./translate.service";
+import { decryptContent } from "../utils/messageContent";
 
 export async function createMessageForChat(input: {
     chatId: string,
     senderId: string,
-    content: { 
+    content: {
         text: string;
     };
     clientId?: string;
@@ -29,8 +31,12 @@ export async function createMessageForChat(input: {
     }
 
     const sender = await prisma.user.findUnique({
-        where: { id: input.senderId },
-        select: { preferredLang: true },
+        where: {
+            id: input.senderId,
+        },
+        select: {
+            preferredLang: true,
+        },
     });
 
     if (!sender) {
@@ -40,8 +46,12 @@ export async function createMessageForChat(input: {
     const senderLang = sender.preferredLang;
 
     const recipientIds = (await prisma.chatMember.findMany({
-        where: { chatId: input.chatId },
-        select: { userId: true },
+        where: {
+            chatId: input.chatId,
+        },
+        select: {
+            userId: true,
+        },
     })).filter((member) => member.userId !== input.senderId).map((member) => member.userId);
 
     const requiredTranslations = await prisma.user.findMany({
@@ -72,15 +82,21 @@ export async function createMessageForChat(input: {
         }));
     }
 
+    const { cipher: textCipher, nonce: textNonce } = encrypt(input.content.text);
+    const encryptedTranslations = translations.map((translation) => {
+        const { cipher, nonce } = encrypt(translation.translatedText);
+        return { ...translation, cipher, nonce };
+    });
+
     const result = await prisma.$transaction(async (tx) => {
         const messageContent = await tx.messageContent.create({
             data: {
-                text: input.content.text,
+                textCipher,
+                textNonce,
                 originalLang: senderLang,
             },
             select: {
                 id: true,
-                text: true,
                 originalLang: true,
             },
         });
@@ -107,25 +123,19 @@ export async function createMessageForChat(input: {
                         createdAt: true,
                     },
                 },
-                content: {
-                    select: {
-                        id: true,
-                        text: true,
-                        originalLang: true,
-                    },
-                },
                 isDeleted: true,
                 createdAt: true,
                 updatedAt: true,
             },
         });
 
-        if (translations.length > 0) {
-            await tx.messageTranslation.createMany({ 
-                data: translations.map((translation) => ({
+        if (encryptedTranslations.length > 0) {
+            await tx.messageTranslation.createMany({
+                data: encryptedTranslations.map((translation) => ({
                     contentId: messageContent.id,
                     targetLang: translation.targetLang,
-                    translatedText: translation.translatedText,
+                    translatedTextCipher: translation.cipher,
+                    translatedTextNonce: translation.nonce,
                 })),
             });
         }
@@ -137,7 +147,7 @@ export async function createMessageForChat(input: {
             })),
         });
 
-        return { 
+        return {
             message: {
                 ...message,
                 id: message.id.toString(),
@@ -148,8 +158,9 @@ export async function createMessageForChat(input: {
                     createdAt: message.sender.createdAt.toISOString(),
                 },
                 content: {
-                    ...message.content,
-                    id: message.content.id.toString(),
+                    id: messageContent.id.toString(),
+                    text: input.content.text,
+                    originalLang: senderLang,
                 },
                 createdAt: message.createdAt.toISOString(),
                 updatedAt: message.updatedAt.toISOString(),
@@ -200,8 +211,12 @@ export async function getMessagesForChat(input: {
     since?: Date,
 }): Promise<{ messages: Message[] }> {
     const user = await prisma.user.findUnique({
-        where: { id: input.userId },
-        select: { preferredLang: true },
+        where: {
+            id: input.userId,
+        },
+        select: {
+            preferredLang: true,
+        },
     });
     if (!user) {
         throw new Error("user_not_found");
@@ -228,7 +243,9 @@ export async function getMessagesForChat(input: {
                 gte: input.since,
             } : undefined,
         },
-        orderBy: { createdAt: "asc" },
+        orderBy: {
+            createdAt: "asc",
+        },
         select: {
             id: true,
             chat: {
@@ -248,7 +265,8 @@ export async function getMessagesForChat(input: {
             content: {
                 select: {
                     id: true,
-                    text: true,
+                    textCipher: true,
+                    textNonce: true,
                     originalLang: true,
                     translations: {
                         where: {
@@ -256,7 +274,8 @@ export async function getMessagesForChat(input: {
                         },
                         select: {
                             targetLang: true,
-                            translatedText: true,
+                            translatedTextCipher: true,
+                            translatedTextNonce: true,
                         },
                     },
                 },
@@ -290,14 +309,7 @@ export async function getMessagesForChat(input: {
                 id: message.sender.id.toString(),
                 createdAt: message.sender.createdAt.toISOString(),
             },
-            content: {
-                ...message.content,
-                id: message.content.id.toString(),
-                translation: message.content.translations.length > 0 ? {
-                    targetLang: message.content.translations[0]!.targetLang,
-                    translatedText: message.content.translations[0]!.translatedText,
-                } : undefined,
-            },
+            content: decryptContent(message.content),
             receipts: message.receipts
                 .filter((receipt) => receipt.message.senderId === input.userId)
                 .map((receipt) => ({
@@ -395,7 +407,9 @@ export async function markAllMessagesAsDelivered(input: {
 
     await prisma.messageReceipt.updateMany({
         where: {
-            messageId: { in: messageIds },
+            messageId: {
+                in: messageIds,
+            },
             userId: input.recipientId,
             deliveredAt: null,
         },

@@ -34,8 +34,20 @@ export class InfraStack extends cdk.Stack {
             },
         });
 
+        const messageEncryptionSecret = new secretsmanager.Secret(this, "MessageEncryptionSecret", {
+            secretName: "app/message-encryption-key",
+            description: "Seed string for deriving the AES-256-GCM key used for message encryption",
+            generateSecretString: {
+                secretStringTemplate: JSON.stringify({}),
+                generateStringKey: "MESSAGE_ENCRYPTION_SEED",
+                passwordLength: 64,
+                excludePunctuation: true,
+            },
+        });
+
         this.api = new ApiStack(this, "Api", {
             appSecret,
+            messageEncryptionSecret,
             env: {
                 cognitoUserPoolId: this.auth.userPool.userPoolId,
                 cognitoClientId: this.auth.userPoolClient.userPoolClientId,

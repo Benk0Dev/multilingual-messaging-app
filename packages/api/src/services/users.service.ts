@@ -1,5 +1,6 @@
 import { prisma } from "@app/db";
 import { User, SearchUsersResult } from "@app/shared-types/models";
+import { decryptContent } from "../utils/messageContent";
 
 function isUniqueConstraintError(err: unknown): boolean {
     return (
@@ -104,7 +105,9 @@ export async function updateUser(input: {
 
     try {
         const user = await prisma.user.update({
-            where: { id: input.id },
+            where: {
+                id: input.id,
+            },
             data,
             select: {
                 id: true,
@@ -154,6 +157,19 @@ export async function searchUsers(input: {
     if (!trimmedQuery) {
         return [];
     }
+
+    const me = await prisma.user.findUnique({
+        where: {
+            id: input.currentUserId,
+        },
+        select: {
+            preferredLang: true,
+        },
+    });
+    if (!me) {
+        return [];
+    }
+    const userLang = me.preferredLang;
 
     // First: users who already have a chat with the current user
     const existingChatMatches = await prisma.chatMember.findMany({
@@ -238,12 +254,17 @@ export async function searchUsers(input: {
                             content: {
                                 select: {
                                     id: true,
-                                    text: true,
+                                    textCipher: true,
+                                    textNonce: true,
                                     originalLang: true,
                                     translations: {
+                                        where: {
+                                            targetLang: userLang,
+                                        },
                                         select: {
                                             targetLang: true,
-                                            translatedText: true,
+                                            translatedTextCipher: true,
+                                            translatedTextNonce: true,
                                         },
                                     },
                                 },
@@ -268,6 +289,20 @@ export async function searchUsers(input: {
     const existingUsersMap = new Map<string, SearchUsersResult>();
 
     for (const match of existingChatMatches) {
+        const lastMsg = match.chat.messages[0];
+        const lastMessage = lastMsg ? {
+            ...lastMsg,
+            id: lastMsg.id.toString(),
+            content: decryptContent(lastMsg.content),
+            sender: {
+                ...lastMsg.sender,
+                id: lastMsg.sender.id.toString(),
+                createdAt: lastMsg.sender.createdAt.toISOString(),
+            },
+            createdAt: lastMsg.createdAt.toISOString(),
+            updatedAt: lastMsg.updatedAt.toISOString(),
+        } : undefined;
+
         for (const member of match.chat.members) {
             const user = member.user;
 
@@ -279,29 +314,14 @@ export async function searchUsers(input: {
                         createdAt: user.createdAt.toISOString(),
                     },
                     chat: {
-                        ...match.chat,
                         id: match.chat.id.toString(),
                         createdAt: match.chat.createdAt.toISOString(),
-                        members: match.chat.members.map((member) => ({
-                            ...member.user,
-                            id: member.user.id.toString(),
-                            createdAt: member.user.createdAt.toISOString(),
+                        members: match.chat.members.map((m) => ({
+                            ...m.user,
+                            id: m.user.id.toString(),
+                            createdAt: m.user.createdAt.toISOString(),
                         })),
-                        lastMessage: match.chat.messages[0] ? {
-                            ...match.chat.messages[0],
-                            id: match.chat.messages[0].id.toString(),
-                            content: {
-                                ...match.chat.messages[0].content,
-                                id: match.chat.messages[0].content.id.toString(),
-                            },
-                            sender: {
-                                ...match.chat.messages[0].sender,
-                                id: match.chat.messages[0].sender.id.toString(),
-                                createdAt: match.chat.messages[0].sender.createdAt.toISOString(),
-                            },
-                            createdAt: match.chat.messages[0].createdAt.toISOString(),
-                            updatedAt: match.chat.messages[0].updatedAt.toISOString(),
-                        } : undefined,
+                        lastMessage,
                     },
                 });
             }
@@ -343,11 +363,14 @@ export async function searchUsers(input: {
         take: input.limit - existingUserIds.length,
     });
 
-    return [...existingUsersMap.values(), ...globalMatches.map((match) => ({
-        user: {
-            ...match,
-            id: match.id.toString(),
-            createdAt: match.createdAt.toISOString(),
-        },
-    }))];
+    return [
+        ...existingUsersMap.values(),
+        ...globalMatches.map((match) => ({
+            user: {
+                ...match,
+                id: match.id.toString(),
+                createdAt: match.createdAt.toISOString(),
+            },
+        })),
+    ];
 }

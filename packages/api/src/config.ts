@@ -3,6 +3,11 @@ import {
     GetSecretValueCommand,
 } from "@aws-sdk/client-secrets-manager";
 
+const SECRET_ARN_ENV_VARS = [
+    "APP_SECRET_ARN",
+    "MESSAGE_ENCRYPTION_SECRET_ARN",
+] as const;
+
 let loaded = false;
 
 export async function loadConfig(): Promise<void> {
@@ -11,24 +16,29 @@ export async function loadConfig(): Promise<void> {
     const isLambda = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
 
     if (isLambda) {
-        const secretArn = process.env.APP_SECRET_ARN;
-        if (!secretArn) {
-            throw new Error("APP_SECRET_ARN is missing on Lambda");
-        }
-
         const client = new SecretsManagerClient({});
-        const response = await client.send(
-            new GetSecretValueCommand({ SecretId: secretArn })
+
+        const payloads = await Promise.all(
+            SECRET_ARN_ENV_VARS.map(async (name) => {
+                const arn = process.env[name];
+                if (!arn) {
+                    throw new Error(`${name} is missing on Lambda`);
+                }
+                const res = await client.send(
+                    new GetSecretValueCommand({ SecretId: arn })
+                );
+                if (!res.SecretString) {
+                    throw new Error(`Secret ${name} has no SecretString payload`);
+                }
+                return JSON.parse(res.SecretString) as Record<string, string>;
+            })
         );
 
-        if (!response.SecretString) {
-            throw new Error("Secret has no SecretString payload");
-        }
-
-        const parsed = JSON.parse(response.SecretString) as Record<string, string>;
-        for (const [key, value] of Object.entries(parsed)) {
-            if (process.env[key] === undefined) {
-                process.env[key] = value;
+        for (const parsed of payloads) {
+            for (const [key, value] of Object.entries(parsed)) {
+                if (process.env[key] === undefined) {
+                    process.env[key] = value;
+                }
             }
         }
     }
