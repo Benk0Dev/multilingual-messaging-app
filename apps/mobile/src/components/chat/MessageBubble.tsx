@@ -104,7 +104,7 @@ export function MessageBubble({
                             variant="caption"
                             color={subtextColor}
                             style={[
-                                { marginBottom: spacing.xs, flex: 1 },
+                                { marginBottom: spacing.xs },
                                 isOriginalRtl && styles.rtlText,
                             ]}
                         >
