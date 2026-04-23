@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
-import { useEffect, useState } from "react";
-import { getValidAccessToken } from "../../src/auth/session";
+import { useCallback, useEffect, useState } from "react";
+import { getValidAccessToken, hasSession } from "../../src/auth/session";
 import useAppWebSocket from "@/src/hooks/useAppWebSocket";
 import { useUserStore } from "@/src/store/userStore";
 import { useChatStore } from "@/src/store/chatStore";
@@ -9,7 +9,7 @@ import { useChatSync } from "@/src/hooks/useChatSync";
 import { getChats } from "@/src/api/chats";
 
 export default function AppLayout() {
-    const [accessToken, setAccessToken] = useState<string | null>(null);
+    const [sessionPresent, setSessionPresent] = useState<boolean | null>(null);
 
     const me = useUserStore((state) => state.me);
 
@@ -18,20 +18,23 @@ export default function AppLayout() {
     const setMessageReceipt = useChatStore((state) => state.setMessageReceipt);
     const setChats = useChatStore((state) => state.setChats);
 
-    // Load access token for WebSocket connection
     useEffect(() => {
         let isActive = true;
         (async () => {
-            const token = await getValidAccessToken();
-            if (isActive) setAccessToken(token);
+            const present = await hasSession();
+            if (isActive) setSessionPresent(present);
         })();
         return () => {
             isActive = false;
         };
     }, []);
 
-        const { connectionCount } = useAppWebSocket({
-        accessToken,
+    const getAccessToken = useCallback(async () => {
+        return getValidAccessToken();
+    }, []);
+
+    const { connectionCount } = useAppWebSocket({
+        getAccessToken: sessionPresent ? getAccessToken : null,
         onEvent: (event) => {
             if (event.type === "chat.created") {
                 appendChat(event.chat.id, event.chat);
@@ -74,7 +77,7 @@ export default function AppLayout() {
         },
     });
 
-    useChatSync(connectionCount, Boolean(accessToken));
+    useChatSync(connectionCount, sessionPresent === true);
 
     return (
         <Tabs

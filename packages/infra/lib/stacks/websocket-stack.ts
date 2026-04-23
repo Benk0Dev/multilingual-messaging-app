@@ -5,6 +5,7 @@ import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigwIntegrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import * as lambdaNode from "aws-cdk-lib/aws-lambda-nodejs";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as path from "path";
 
 type WebSocketStackProps = cdk.NestedStackProps & {
@@ -18,6 +19,7 @@ export class WebSocketStack extends cdk.NestedStack {
     public readonly connectionsTable: dynamodb.Table;
     public readonly connectFn: lambda.Function;
     public readonly disconnectFn: lambda.Function;
+    public readonly pingFn: lambda.Function;
     public readonly webSocketApi: apigwv2.WebSocketApi;
     public readonly webSocketStage: apigwv2.WebSocketStage;
     public readonly webSocketApiEndpoint: string;
@@ -65,6 +67,12 @@ export class WebSocketStack extends cdk.NestedStack {
             },
         });
 
+        this.pingFn = new lambdaNode.NodejsFunction(this, "WsPingFn", {
+            runtime: lambda.Runtime.NODEJS_20_X,
+            entry: path.join(__dirname, "../../../lambdas/src/websocket/ping.ts"),
+            handler: "handler",
+        });
+
         this.connectionsTable.grantReadWriteData(this.connectFn);
         this.connectionsTable.grantReadWriteData(this.disconnectFn);
 
@@ -78,11 +86,26 @@ export class WebSocketStack extends cdk.NestedStack {
             },
         });
 
+        this.webSocketApi.addRoute("ping", {
+            integration: new apigwIntegrations.WebSocketLambdaIntegration("PingIntegration", this.pingFn),
+        });
+
         this.webSocketStage = new apigwv2.WebSocketStage(this, "WebSocketStage", {
             webSocketApi: this.webSocketApi,
             stageName: "dev",
             autoDeploy: true,
         });
+
+        const region = cdk.Stack.of(this).region;
+        const account = cdk.Stack.of(this).account;
+        this.pingFn.addToRolePolicy(
+            new iam.PolicyStatement({
+                actions: ["execute-api:ManageConnections"],
+                resources: [
+                    `arn:aws:execute-api:${region}:${account}:${this.webSocketApi.apiId}/${this.webSocketStage.stageName}/*`,
+                ],
+            })
+        );
 
         this.webSocketApiEndpoint = this.webSocketStage.url;
         this.webSocketHttpApiEndpoint = this.webSocketStage.callbackUrl;
