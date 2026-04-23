@@ -7,7 +7,6 @@ import {
     Alert,
     TouchableWithoutFeedback,
     Keyboard,
-    Platform,
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -170,7 +169,7 @@ export default function EditProfile() {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.8,
@@ -247,7 +246,7 @@ export default function EditProfile() {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior="padding"
             keyboardVerticalOffset={-(insets.bottom + spacing.lg)}
         >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>

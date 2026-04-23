@@ -39,7 +39,7 @@ export default function StartScreen() {
     return (
         <KeyboardAvoidingView
             style={{ flex: 1, backgroundColor: colors.bg }}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior="padding"
             keyboardVerticalOffset={-(insets.bottom)}
         >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>

@@ -120,7 +120,7 @@ export default function VerifyScreen() {
     return (
         <KeyboardAvoidingView
             style={{ flex: 1, backgroundColor: colors.bg }}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior="padding"
             keyboardVerticalOffset={-(insets.bottom)}
         >
             <View

@@ -24,7 +24,7 @@ export function OnboardingScreen({ children, keyboardOffset, style }: Onboarding
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior="padding"
             keyboardVerticalOffset={keyboardOffset ?? -insets.bottom}
         >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>

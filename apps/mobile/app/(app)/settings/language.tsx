@@ -72,7 +72,7 @@ export default function LanguageSettings() {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior="padding"
         >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                 <View
