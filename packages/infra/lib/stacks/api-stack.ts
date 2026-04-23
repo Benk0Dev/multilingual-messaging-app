@@ -18,9 +18,11 @@ export type ApiStackProps = cdk.NestedStackProps & {
         s3Bucket: string;
         websocketUrl: string;
         websocketConnectionsTable: string;
+        googleCloudProjectId: string;
     };
     appSecret: secretsmanager.ISecret;
     messageEncryptionSecret: secretsmanager.ISecret;
+    googleCredentialsSecret: secretsmanager.ISecret;
     userPool: cognito.IUserPool;
     userPoolClient: cognito.IUserPoolClient;
     connectionsTable: dynamodb.ITable;
@@ -50,6 +52,8 @@ export class ApiStack extends cdk.NestedStack {
                 NODE_ENV: "production",
                 APP_SECRET_ARN: props.appSecret.secretArn,
                 MESSAGE_ENCRYPTION_SECRET_ARN: props.messageEncryptionSecret.secretArn,
+                GOOGLE_CREDENTIALS_SECRET_ARN: props.googleCredentialsSecret.secretArn,
+                GOOGLE_CLOUD_PROJECT_ID: props.env.googleCloudProjectId,
                 COGNITO_USER_POOL_ID: props.env.cognitoUserPoolId,
                 COGNITO_USER_POOL_CLIENT_ID: props.env.cognitoClientId,
                 S3_BUCKET: props.env.s3Bucket,
@@ -60,15 +64,18 @@ export class ApiStack extends cdk.NestedStack {
 
         props.appSecret.grantRead(this.apiFn);
         props.messageEncryptionSecret.grantRead(this.apiFn);
+        props.googleCredentialsSecret.grantRead(this.apiFn);
         props.connectionsTable.grantReadWriteData(this.apiFn);
         props.bucket.grantReadWrite(this.apiFn);
 
-        this.apiFn.addToRolePolicy(
-            new iam.PolicyStatement({
-                actions: ["translate:TranslateText"],
-                resources: ["*"],
-            })
-        );
+        // Amazon Translate IAM removed - translation now uses Google Cloud
+        // Leaving this commented in case rollback to Amazon is needed
+        // this.apiFn.addToRolePolicy(
+        //     new iam.PolicyStatement({
+        //         actions: ["translate:TranslateText"],
+        //         resources: ["*"],
+        //     })
+        // );
 
         const region = cdk.Stack.of(this).region;
         const account = cdk.Stack.of(this).account;

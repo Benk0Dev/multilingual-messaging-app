@@ -45,15 +45,25 @@ export class InfraStack extends cdk.Stack {
             },
         });
 
+        const googleCredentialsSecret = new secretsmanager.Secret(this, "GoogleCredentialsSecret", {
+            secretName: "app/google-credentials",
+            description: "Google Cloud service account JSON for Cloud Translation API",
+            secretStringValue: cdk.SecretValue.unsafePlainText(
+                '{"placeholder": "paste-service-account-json-via-console"}'
+            ),
+        });
+
         this.api = new ApiStack(this, "Api", {
             appSecret,
             messageEncryptionSecret,
+            googleCredentialsSecret,
             env: {
                 cognitoUserPoolId: this.auth.userPool.userPoolId,
                 cognitoClientId: this.auth.userPoolClient.userPoolClientId,
                 s3Bucket: this.storage.s3Bucket.bucketName,
                 websocketUrl: this.ws.webSocketHttpApiEndpoint,
                 websocketConnectionsTable: this.ws.connectionsTable.tableName,
+                googleCloudProjectId: process.env.GOOGLE_CLOUD_PROJECT_ID ?? "",
             },
             userPool: this.auth.userPool,
             userPoolClient: this.auth.userPoolClient,

@@ -2,11 +2,17 @@ import {
     SecretsManagerClient,
     GetSecretValueCommand,
 } from "@aws-sdk/client-secrets-manager";
+import { writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
-const SECRET_ARN_ENV_VARS = [
+const KV_SECRET_ARN_ENV_VARS = [
     "APP_SECRET_ARN",
     "MESSAGE_ENCRYPTION_SECRET_ARN",
 ] as const;
+
+const GOOGLE_CREDENTIALS_SECRET_ARN_ENV_VAR = "GOOGLE_CREDENTIALS_SECRET_ARN";
+const GOOGLE_CREDENTIALS_FILE_PATH = path.join(tmpdir(), "google-credentials.json");
 
 let loaded = false;
 
@@ -18,8 +24,8 @@ export async function loadConfig(): Promise<void> {
     if (isLambda) {
         const client = new SecretsManagerClient({});
 
-        const payloads = await Promise.all(
-            SECRET_ARN_ENV_VARS.map(async (name) => {
+        const kvPayloads = await Promise.all(
+            KV_SECRET_ARN_ENV_VARS.map(async (name) => {
                 const arn = process.env[name];
                 if (!arn) {
                     throw new Error(`${name} is missing on Lambda`);
@@ -34,13 +40,26 @@ export async function loadConfig(): Promise<void> {
             })
         );
 
-        for (const parsed of payloads) {
+        for (const parsed of kvPayloads) {
             for (const [key, value] of Object.entries(parsed)) {
                 if (process.env[key] === undefined) {
                     process.env[key] = value;
                 }
             }
         }
+
+        const googleArn = process.env[GOOGLE_CREDENTIALS_SECRET_ARN_ENV_VAR];
+        if (!googleArn) {
+            throw new Error(`${GOOGLE_CREDENTIALS_SECRET_ARN_ENV_VAR} is missing on Lambda`);
+        }
+        const googleRes = await client.send(
+            new GetSecretValueCommand({ SecretId: googleArn })
+        );
+        if (!googleRes.SecretString) {
+            throw new Error(`Secret ${GOOGLE_CREDENTIALS_SECRET_ARN_ENV_VAR} has no SecretString payload`);
+        }
+        await writeFile(GOOGLE_CREDENTIALS_FILE_PATH, googleRes.SecretString, { mode: 0o600 });
+        process.env.GOOGLE_APPLICATION_CREDENTIALS = GOOGLE_CREDENTIALS_FILE_PATH;
     }
 
     loaded = true;
