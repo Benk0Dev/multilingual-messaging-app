@@ -17,7 +17,7 @@ export function MessageInput({
     value,
     onChangeText,
     onSend,
-    canSend = true,
+    canSend = false,
 }: MessageInputProps) {
     const { colors, radii, spacing } = useTheme();
     const insets = useSafeAreaInsets();

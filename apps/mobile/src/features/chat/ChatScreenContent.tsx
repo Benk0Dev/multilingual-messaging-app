@@ -214,6 +214,7 @@ export default function ChatScreenContent(props: Props) {
                 ...buildPendingMessage(p, me.id, chatIdForPending),
                 isFirstInGroup: true,
                 isLastInGroup: true,
+                isFirstInTimeGroup: true,
                 showDatePill: false,
             }))
             .reverse();
@@ -394,6 +395,7 @@ export default function ChatScreenContent(props: Props) {
                                     receiptStatus={receiptStatus}
                                     isFirstInGroup={item.isFirstInGroup}
                                     isLastInGroup={item.isLastInGroup}
+                                    isFirstInTimeGroup={item.isFirstInTimeGroup}
                                     isPending={isPending}
                                     showOriginal={!mine && hasTranslation}
                                 />
@@ -410,7 +412,7 @@ export default function ChatScreenContent(props: Props) {
                     value={text}
                     onChangeText={setText}
                     onSend={() => sendMessage().catch(() => {})}
-                    canSend={!isCreatingChat}
+                    canSend={!isCreatingChat && text.trim().length > 0}
                 />
             </KeyboardAvoidingView>
         </View>

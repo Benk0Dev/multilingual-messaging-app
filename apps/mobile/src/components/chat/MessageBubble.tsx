@@ -1,67 +1,17 @@
 import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import Svg, { Line, Path } from 'react-native-svg';
 import { useTheme } from '../../theme';
 import { Text } from '../ui/Text';
 import { ReceiptIcon, type ReceiptStatus } from './ReceiptIcon';
 import { formatTime } from '@/src/utils/dateFormat';
 import { Ionicons } from '@expo/vector-icons';
 
-const TAIL_W = 10;
-const TAIL_H = 14;
+// Detects RTL scripts (e.g. Arabic, Hebrew, etc.)
+const RTL_REGEX = /[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]/;
 
-function BubbleTail({
-    color,
-    sent,
-    borderColor,
-    borderWidth = 0,
-}: {
-    color: string;
-    sent: boolean;
-    borderColor?: string;
-    borderWidth?: number;
-}) {
-    return (
-        <View
-            style={[
-                styles.tailWrap,
-                sent
-                    ? { right: -TAIL_W }
-                    : { left: -TAIL_W, bottom: -borderWidth },
-            ]}
-        >
-            <Svg
-                width={TAIL_W}
-                height={TAIL_H}
-                viewBox="0 0 10 14"
-                style={sent ? undefined : { transform: [{ scaleX: -1 }] }}
-            >
-                <Path d="M0 0H10V14H0V0ZM0 0C0.15 4.8 2.1 8.9 10 14V0H0Z" fill={color} />
-                {borderColor && borderWidth > 0 && (
-                    <>
-                        <Path
-                            d="M0 0C0.15 4.8 2.1 8.9 10 14"
-                            fill="none"
-                            stroke={borderColor}
-                            strokeWidth={borderWidth * 1.25}
-                            strokeLinejoin="round"
-                        />
-                        <Line
-                            x1="0"
-                            y1="14"
-                            x2="10"
-                            y2="14"
-                            stroke={borderColor}
-                            strokeWidth={borderWidth * 2.25}
-                            strokeLinecap="round"
-                        />
-                    </>
-                )}
-            </Svg>
-        </View>
-    );
+function isRtlText(s: string | null | undefined): boolean {
+    return !!s && RTL_REGEX.test(s);
 }
-
 
 interface MessageBubbleProps {
     sent: boolean;
@@ -71,6 +21,7 @@ interface MessageBubbleProps {
     receiptStatus?: ReceiptStatus;
     isFirstInGroup: boolean;
     isLastInGroup: boolean;
+    isFirstInTimeGroup: boolean;
     isPending?: boolean;
     showOriginal?: boolean;
     onLongPress?: () => void;
@@ -84,27 +35,31 @@ export function MessageBubble({
     receiptStatus,
     isFirstInGroup,
     isLastInGroup,
+    isFirstInTimeGroup,
     isPending = false,
     showOriginal = true,
     onLongPress,
 }: MessageBubbleProps) {
     const { colors, radii, spacing } = useTheme();
 
-    const r = radii.bubble;
-    const showTail = isLastInGroup;
+    const isMainRtl = isRtlText(text);
+    const isOriginalRtl = isRtlText(originalText);
+
+    const lg = radii.bubble;
+    const sm = radii.bubbleJoint;
 
     const borderRadius = sent
         ? {
-            borderTopLeftRadius: r,
-            borderTopRightRadius: r,
-            borderBottomRightRadius: showTail ? 0 : r,
-            borderBottomLeftRadius: r,
+            borderTopLeftRadius: lg,
+            borderTopRightRadius: isFirstInGroup ? lg : sm,
+            borderBottomRightRadius: isLastInGroup ? lg : sm,
+            borderBottomLeftRadius: lg,
         }
         : {
-            borderTopLeftRadius: r,
-            borderTopRightRadius: r,
-            borderBottomRightRadius: r,
-            borderBottomLeftRadius: showTail ? 0 : r,
+            borderTopLeftRadius: isFirstInGroup ? lg : sm,
+            borderTopRightRadius: lg,
+            borderBottomRightRadius: lg,
+            borderBottomLeftRadius: isLastInGroup ? lg : sm,
         };
 
     const bubbleBg = sent ? colors.sentBubble : colors.receivedBubble;
@@ -126,11 +81,8 @@ export function MessageBubble({
                 styles.wrapper,
                 {
                     alignSelf: sent ? 'flex-end' : 'flex-start',
-                    marginTop: isFirstInGroup ? spacing.sm : spacing.xxs,
+                    marginTop: isFirstInTimeGroup ? spacing.sm : spacing.xxs,
                     opacity: isPending ? 0.7 : 1,
-                    // Reserve space for the tail
-                    paddingRight: sent ? TAIL_W : 0,
-                    paddingLeft: !sent ? TAIL_W : 0,
                 },
             ]}
         >
@@ -145,22 +97,16 @@ export function MessageBubble({
                     },
                 ]}
             >
-                {showTail && (
-                    <BubbleTail
-                        color={bubbleBg}
-                        sent={sent}
-                        borderColor={bubbleBorder}
-                        borderWidth={bubbleBorder ? 0.5 : 0}
-                    />
-                )}
-
                 {hasTranslation && (
                     <View style={styles.translation}>
                         <Ionicons name="language" size={11} color={subtextColor} style={{ marginTop: 2 }} />
                         <Text
                             variant="caption"
                             color={subtextColor}
-                            style={{ marginBottom: spacing.xs }}
+                            style={[
+                                { marginBottom: spacing.xs, flex: 1 },
+                                isOriginalRtl && styles.rtlText,
+                            ]}
                         >
                             {originalText}
                         </Text>
@@ -168,14 +114,18 @@ export function MessageBubble({
                 )}
 
                 <View style={styles.textRow}>
-                    <Text variant="body" color={mainTextColor}>
+                    <Text
+                        variant="body"
+                        color={mainTextColor}
+                        style={isMainRtl ? styles.rtlText : undefined}
+                    >
                         {text}
                         <Text style={{ fontSize: 10, color: 'transparent' }}>
                             {spacer}
                         </Text>
                     </Text>
-                    <View style={styles.meta}>
-                        <Text variant="caption" color={timeColor}> 
+                    <View style={[styles.meta, isMainRtl && styles.metaRtl]}>
+                        <Text variant="caption" color={timeColor}>
                             {formatTime(time)}
                         </Text>
                         {sent && receiptStatus && (
@@ -191,17 +141,11 @@ export function MessageBubble({
 const styles = StyleSheet.create({
     wrapper: {
         maxWidth: '78%',
-        position: 'relative',
-    },
-    tailWrap: {
-        position: 'absolute',
-        bottom: 0,
-        zIndex: 1,
     },
     bubble: {
-        paddingHorizontal: 10,
-        paddingTop: 6,
-        paddingBottom: 8,
+        paddingHorizontal: 12,
+        paddingTop: 8,
+        paddingBottom: 9,
     },
     textRow: {
         position: 'relative',
@@ -214,10 +158,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 3,
     },
+    metaRtl: {
+        right: undefined,
+        left: 0,
+        flexDirection: 'row-reverse',
+    },
     translation: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 3,
         opacity: 0.5,
+    },
+    rtlText: {
+        writingDirection: 'rtl',
+        textAlign: 'right',
     },
 });

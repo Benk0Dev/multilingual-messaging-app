@@ -103,8 +103,13 @@ export default function LanguageSettings() {
                                 {...inputTheme}
                                 autoCapitalize="none"
                                 autoCorrect={false}
-                                style={[styles.searchInput, { color: colors.textPrimary }]}
+                                style={[styles.searchInput, { color: colors.textPrimary, lineHeight: 19 }]}
                             />
+                            {hasQuery && (
+                                <Pressable onPress={() => setQuery("")}>
+                                    <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
+                                </Pressable>
+                            )}
                         </View>
                     </View>
 

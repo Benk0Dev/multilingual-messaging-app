@@ -9,7 +9,8 @@ export const spacing = {
 };
   
 export const radii = {
-    bubble: 8,
+    bubble: 20,
+    bubbleJoint: 4,
     input: 12,
     button: 10,
     card: 12,

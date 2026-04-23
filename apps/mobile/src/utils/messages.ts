@@ -1,9 +1,36 @@
 import type { Message } from "@app/shared-types/models";
 import { PendingOutgoing } from "../store/chatStore";
 
+const TIME_GROUP_THRESHOLD_MS = 45_000;
+
 export interface GroupFlags {
     isFirstInGroup: boolean;
     isLastInGroup: boolean;
+    isFirstInTimeGroup: boolean;
+}
+
+export function computeGroupFlags(
+    messages: Message[]
+): (Message & GroupFlags)[] {
+    return messages.map((msg, i) => {
+        const prev = messages[i - 1];
+        const next = messages[i + 1];
+
+        const sameSenderAsPrev = prev && prev.sender.id === msg.sender.id;
+        const sameSenderAsNext = next && next.sender.id === msg.sender.id;
+
+        const sameDayAsPrev = prev && toLocalDayKey(msg.createdAt) === toLocalDayKey(prev.createdAt);
+        const sameDayAsNext = next && toLocalDayKey(msg.createdAt) === toLocalDayKey(next.createdAt);
+
+        const closeEnoughToPrev = prev && Math.abs(new Date(msg.createdAt).getTime() - new Date(prev.createdAt).getTime()) <= TIME_GROUP_THRESHOLD_MS;
+
+        return {
+            ...msg,
+            isFirstInGroup: !(sameSenderAsPrev && sameDayAsPrev),
+            isLastInGroup: !(sameSenderAsNext && sameDayAsNext),
+            isFirstInTimeGroup: !(sameSenderAsPrev && sameDayAsPrev && closeEnoughToPrev),
+        };
+    });
 }
 
 export interface DatePillFlag {
@@ -13,24 +40,6 @@ export interface DatePillFlag {
 function toLocalDayKey(isoDate: string): string {
     const d = new Date(isoDate);
     return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
-
-export function computeGroupFlags(
-    messages: Message[]
-): (Message & GroupFlags)[] {
-    return messages.map((msg, i) => {
-        const prev = messages[i - 1];
-        const next = messages[i + 1];
-        const sameSenderAsPrev = prev && prev.sender.id === msg.sender.id;
-        const sameSenderAsNext = next && next.sender.id === msg.sender.id;
-        const closeEnoughToPrev = prev && Math.abs(new Date(msg.createdAt).getTime() - new Date(prev.createdAt).getTime()) <= 45000;
-        const closeEnoughToNext = next && Math.abs(new Date(next.createdAt).getTime() - new Date(msg.createdAt).getTime()) <= 45000;
-        return {
-            ...msg,
-            isFirstInGroup: !(sameSenderAsPrev && closeEnoughToPrev),
-            isLastInGroup: !(sameSenderAsNext && closeEnoughToNext),
-        };
-    });
 }
 
 export function computeDatePillFlags<T extends Message>(
