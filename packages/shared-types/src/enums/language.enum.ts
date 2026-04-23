@@ -1,10 +1,12 @@
-// Amazon Translate supported languages: https://docs.aws.amazon.com/translate/latest/dg/what-is-languages.html
+// Google Cloud Translation LLM supported languages:
+// https://cloud.google.com/translate/docs/languages#translation_llm_supported_languages
+// Note: languages marked "experimental" are supported but at lower translation quality
 export enum LanguageCode {
     AFRIKAANS = "af",
     ALBANIAN = "sq",
-    AMHARIC = "am",
+    AMHARIC = "am", // experimental
     ARABIC = "ar",
-    ARMENIAN = "hy",
+    ARMENIAN = "hy", // experimental
     AZERBAIJANI = "az",
     BENGALI = "bn",
     BOSNIAN = "bs",
@@ -15,7 +17,6 @@ export enum LanguageCode {
     CROATIAN = "hr",
     CZECH = "cs",
     DANISH = "da",
-    DARI = "fa-AF",
     DUTCH = "nl",
     ENGLISH = "en",
     ESTONIAN = "et",
@@ -28,40 +29,36 @@ export enum LanguageCode {
     GERMAN = "de",
     GREEK = "el",
     GUJARATI = "gu",
-    HAITIAN_CREOLE = "ht",
-    HAUSA = "ha",
+    HAUSA = "ha", // experimental
     HEBREW = "he",
     HINDI = "hi",
     HUNGARIAN = "hu",
     ICELANDIC = "is",
     INDONESIAN = "id",
-    IRISH = "ga",
+    IRISH = "ga", // experimental
     ITALIAN = "it",
     JAPANESE = "ja",
     KANNADA = "kn",
-    KAZAKH = "kk",
     KOREAN = "ko",
     LATVIAN = "lv",
     LITHUANIAN = "lt",
     MACEDONIAN = "mk",
     MALAY = "ms",
     MALAYALAM = "ml",
-    MALTESE = "mt",
+    MALTESE = "mt", // experimental
     MARATHI = "mr",
-    MONGOLIAN = "mn",
+    MONGOLIAN = "mn", // experimental
     NORWEGIAN_BOKMAL = "no",
-    PASHTO = "ps",
     POLISH = "pl",
     PORTUGUESE_BRAZIL = "pt",
     PORTUGUESE_PORTUGAL = "pt-PT",
     PUNJABI = "pa",
     ROMANIAN = "ro",
     RUSSIAN = "ru",
-    SERBIAN = "sr",
-    SINHALA = "si",
+    SERBIAN = "sr", // experimental
     SLOVAK = "sk",
     SLOVENIAN = "sl",
-    SOMALI = "so",
+    SOMALI = "so", // experimental
     SPANISH = "es",
     SPANISH_MEXICO = "es-MX",
     SWAHILI = "sw",
