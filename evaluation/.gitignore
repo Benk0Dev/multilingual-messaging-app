@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+results/
+data/flores200_dataset/
+data/flores_sample.json
+.env
